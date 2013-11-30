@@ -1,0 +1,113 @@
+(* lexer/uc.lex *)
+
+(* parameters for ML-Yacc -- don't change *)
+type arg = LexArg.lexarg
+type pos = LexArg.pos
+type svalue = Tokens.svalue
+type ('a,'b) token = ('a,'b) Tokens.token
+type lexresult = (svalue,pos) token
+
+(* stack to keep track of block comments *)
+
+val commentCount = ref 0
+
+fun eof (lexarg) =
+  let val pos = LexArg.readPos lexarg
+  in
+ 	if(!commentCount) = 0 then () else 
+	let val msg = "Unclosed comment at:" 
+	in 
+ 		LexArg.error2 lexarg (msg,pos,pos)
+
+	end;
+    	Tokens.EOF(pos, pos)
+end
+
+ 
+
+(* YOUR HELPER FUNCTIONS HERE *)
+
+(* YOUR HELPER DECLARATIONS BEFORE SECOND "double-percent" *)
+(* YOUR TOKENS SPECIFICATION AFTER SECOND "double-percent" *)
+(* sorry, but ml-lex doesn't allow comments in the sections below *)
+
+val linenum = ref 1
+
+fun inc( i ) = i := !(i) + 1
+fun dec( i)  = i := !(i) - 1
+
+%%
+
+%header (functor UCLexFn(structure Tokens : UC_TOKENS
+			 structure LexArg : LEXARG) : ARG_LEXER);
+ 
+%arg (lexarg);
+%full
+%s LINECOMMENT COMMENT;
+
+alpha = [_A-Za-z];
+digit = [0-9];
+ch = [\']({alpha}|{digit}|[ ]|/\\n/)[\'];
+int = {digit}+|{ch}+;
+ident = {alpha}+{digit}*;
+ws = [\ \t];
+
+
+%%
+
+<INITIAL>"!=" => (Tokens.NOTEQ(yypos, yypos+1));
+<INITIAL>"&&" => (Tokens.ANDAND(yypos, yypos+1));
+<INITIAL>"<=" => (Tokens.LTEQ(yypos, yypos+1));
+<INITIAL>"==" => (Tokens.EQEQ(yypos, yypos+1));
+<INITIAL>">=" => (Tokens.GTEQ(yypos, yypos+1));
+
+<INITIAL>"!" => (Tokens.NOT(yypos, yypos));
+<INITIAL>"(" => (Tokens.LPAREN(yypos, yypos));
+<INITIAL>")" => (Tokens.RPAREN(yypos, yypos));
+<INITIAL>"*" => (Tokens.MUL(yypos, yypos));
+<INITIAL>"+" => (Tokens.PLUS(yypos, yypos));
+<INITIAL>"-" => (Tokens.MINUS(yypos, yypos));
+<INITIAL>"," => (Tokens.COMMA(yypos, yypos));
+<INITIAL>"/" => (Tokens.DIV(yypos, yypos));
+<INITIAL>";" => (Tokens.SEMI(yypos, yypos));
+<INITIAL>"<" => (Tokens.LT(yypos, yypos));
+<INITIAL>"=" => (Tokens.EQ(yypos, yypos));
+<INITIAL>">" => (Tokens.GT(yypos, yypos));
+<INITIAL>"[" => (Tokens.LBRACK(yypos, yypos));
+<INITIAL>"]" => (Tokens.RBRACK(yypos, yypos));
+<INITIAL>"{" => (Tokens.LBRACE(yypos, yypos));
+<INITIAL>"}" => (Tokens.RBRACE(yypos, yypos));
+<INITIAL>"char" => (Tokens.CHAR(yypos, yypos+3));
+<INITIAL>"else" => (Tokens.ELSE(yypos, yypos+3));
+<INITIAL>"if"   => (Tokens.IF(yypos, yypos+1));
+<INITIAL>"int"  => (Tokens.INT(yypos, yypos+2));
+<INITIAL>"return" => (Tokens.RETURN(yypos, yypos+5));
+<INITIAL>"void"   => (Tokens.VOID(yypos, yypos+3));
+<INITIAL>"while"  => (Tokens.WHILE(yypos, yypos+4));
+
+
+<INITIAL>"/*"	  => (YYBEGIN COMMENT; inc (commentCount) ; continue());
+<COMMENT>"*/"     => (YYBEGIN INITIAL; dec (commentCount); continue());
+
+<INITIAL>"//"		=> (YYBEGIN LINECOMMENT; continue());
+
+<COMMENT,LINECOMMENT>.	=> (continue());
+
+<LINECOMMENT>"\n"   => (YYBEGIN INITIAL; LexArg.newLine(lexarg,yypos);LexArg.source(lexarg); continue());
+
+<INITIAL,COMMENT>"\n" => (LexArg.newLine(lexarg,yypos);LexArg.source(lexarg); continue());
+
+<INITIAL>{ws}+ => (continue());
+
+<INITIAL>{int} 	=> (Tokens.INTEGER_CONSTANT((Int.fromString (yytext),yytext),yypos,yypos+ size yytext));
+
+<INITIAL>{ident} => (Tokens.IDENT (yytext,yypos,yypos+ size yytext));
+
+<INITIAL>{ch} => (Tokens.INTEGER_CONSTANT((Int.fromString (yytext),yytext),yypos,yypos+ size yytext));
+
+<INITIAL>.		=>
+	(let val msg = "illegal character " ^ yytext
+	 in
+	   LexArg.error2 lexarg (msg,yypos,yypos);
+	   continue()
+	 end);
