@@ -1,4 +1,4 @@
 MLCCompiler
 ===========
 
-A simple MuC compiler written in ML.
+A MuC compiler written in StandardML.
