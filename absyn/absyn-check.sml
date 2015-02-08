@@ -72,34 +72,32 @@ struct
      | Error 
      | Ok
         
-                
    (* Checking the global variables *)
-   fun checkGlobal (t,dec) env =
-     case dec of 
-       Absyn.VARdecl(id) =>   
-         (case Env.find(env,id) of 
-            SOME Int => (idError("Identifier name is in use: ",id);env)
-          | SOME Char => (idError("Identifier name is in use: ",id);env)
-          | _   => case t of 
-                     Absyn.INTty  => (Env.insert (env,id,Int))
-                   | Absyn.CHARty => (Env.insert (env,id,Char))
-                   | Absyn.VOIDty => (Env.insert (env,id,Void)))
-                   | Absyn.ARRdecl(id,SOME i) =>
-                      (case Env.find(env,id) of 
-                         SOME _ => (idError("Identifier name is in use: ",id);env)
-                       | _   => case t of 
-                                  Absyn.INTty  => (Env.insert (env,id,IntArr(i)))
-                                | Absyn.CHARty => (Env.insert (env,id,CharArr(i)))
-                                | Absyn.VOIDty => (idError("Identifier name is in use: ",id);env))
 
+   fun checkGlobal t (Absyn.VARdecl(id)) env =
+       (case Env.find(env, id) of 
+           SOME Int => (idError("Identifier name is in use: ", id); env)
+         | SOME Char => (idError("Identifier name is in use: ", id); env)
+         | _   => case t of 
+                     Absyn.INTty  => (Env.insert (env, id, Int))
+                   | Absyn.CHARty => (Env.insert (env, id, Char))
+                   | Absyn.VOIDty => (Env.insert (env, id, Void)))
 
-                       | Absyn.ARRdecl(id,NONE) =>
-                           (case Env.find(env,id) of 
-                              SOME _ => (idError("Identifier name is in use: ",id);env)
-                            | _   => case t of 
-                                       Absyn.INTty  => (Env.insert (env,id,IntArr(0)))
-                                     | Absyn.CHARty => (Env.insert (env,id,CharArr(0)))
-                                     | Absyn.VOIDty => (print("Array type is incompatibel!\n");env))
+     | checkGlobal t (Absyn.ARRdecl(id, SOME i)) env =
+       (case Env.find(env, id) of 
+           SOME _ => (idError("Identifier name is in use: ", id); env)
+         | _      => case t of 
+                      Absyn.INTty  => (Env.insert (env, id, IntArr(i)))
+                    | Absyn.CHARty => (Env.insert (env, id, CharArr(i)))
+                    | Absyn.VOIDty => (idError("Identifier name is in use: ", id); env))
+
+     | checkGlobal t (Absyn.ARRdecl(id, NONE)) env =
+           (case Env.find(env, id) of 
+              SOME _ => (idError("Identifier name is in use: ",id); env)
+            | _   => case t of 
+                       Absyn.INTty  => (Env.insert (env, id, IntArr(0)))
+                     | Absyn.CHARty => (Env.insert (env, id, CharArr(0)))
+                     | Absyn.VOIDty => (print("Array type is incompatibel!\n"); env))
 
                                                    
    (*************************************) 
@@ -359,7 +357,7 @@ struct
    (***********************************************************************)
    fun checkDeck (env,dec) =
      case dec of 
-       Absyn.GLOBAL(Absyn.VARDEC(t,d))  => checkGlobal (t,d) env
+       Absyn.GLOBAL(Absyn.VARDEC(t,d))  => checkGlobal t d env
      | Absyn.FUNC{name,formals,retTy,locals,body} => analyzeFunc (name,formals,retTy,locals,body,env)
      | Absyn.EXTERN{name,formals,retTy} => checkExtern (name,formals,retTy,env)
 

@@ -20,11 +20,11 @@ absyn/absyn-print.sml
 
 lexer/lexarg.sig
 lexer/lexarg.sml
-parser/uc.grm	(* uncomment after assignment 1 *)
+parser/uc.grm 	(* uncomment after assignment 1 *)
 lexer/uc.lex
 parser/parse.sig
 parser/parse.sml
-(*parser/fake-parse.sml *)	(* comment out when uc.grm is working *)
+(* parser/fake-parse.sml *) 	(* comment out when uc.grm is working *)
 
 rtl/rtl.sig
 rtl/rtl.sml

@@ -141,9 +141,6 @@ expression
  	| expression NOTEQ expression %prec NOTEQ
 		(Absyn.EXP(Absyn.BINARY(Absyn.NE,expression1,expression2),expression1left,expression2right))
 
-
-
-
  	| expression LT expression %prec LT
 		(Absyn.EXP(Absyn.BINARY(Absyn.LT,expression1,expression2),expression1left,expression2right))
 
