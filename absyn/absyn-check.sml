@@ -74,7 +74,7 @@ struct
         
    (* Checking the global variables *)
 
-   fun checkGlobal t (Absyn.VARdecl(id)) env =
+   fun check_globals t (Absyn.VARdecl(id)) env =
        (case Env.find(env, id) of 
            SOME Int => (idError("Identifier name is in use: ", id); env)
          | SOME Char => (idError("Identifier name is in use: ", id); env)
@@ -83,7 +83,7 @@ struct
                    | Absyn.CHARty => (Env.insert (env, id, Char))
                    | Absyn.VOIDty => (Env.insert (env, id, Void)))
 
-     | checkGlobal t (Absyn.ARRdecl(id, SOME i)) env =
+     | check_globals t (Absyn.ARRdecl(id, SOME i)) env =
        (case Env.find(env, id) of 
            SOME _ => (idError("Identifier name is in use: ", id); env)
          | _      => case t of 
@@ -91,7 +91,7 @@ struct
                     | Absyn.CHARty => (Env.insert (env, id, CharArr(i)))
                     | Absyn.VOIDty => (idError("Identifier name is in use: ", id); env))
 
-     | checkGlobal t (Absyn.ARRdecl(id, NONE)) env =
+     | check_globals t (Absyn.ARRdecl(id, NONE)) env =
            (case Env.find(env, id) of 
               SOME _ => (idError("Identifier name is in use: ",id); env)
             | _   => case t of 
@@ -99,237 +99,185 @@ struct
                      | Absyn.CHARty => (Env.insert (env, id, CharArr(0)))
                      | Absyn.VOIDty => (print("Array type is incompatibel!\n"); env))
 
-                                                   
-   (*************************************) 
-                                            
-   (*fun checkExtern dec = let *)
-   (* Checking functions *)
-   fun checkFunction (name,forms,ret,env) = 
-     (case Env.find(env,name) of 
-        SOME (_) => (idError("Identifier name is in use: ",name);env) 
+   fun check_function name forms ret env = 
+     (case Env.find(env, name) of 
+        SOME (_) => (idError("Identifier name is in use: ", name) ; env) 
       | _   => case ret of 
-                 Absyn.INTty  => (Env.insert (env,name,IntFunc(makeFormList(forms))))
-               | Absyn.CHARty => (Env.insert (env,name,CharFunc(makeFormList(forms))))
-               | Absyn.VOIDty => (Env.insert (env,name,VoidFunc(makeFormList(forms)))))
+                 Absyn.INTty  => (Env.insert (env, name, IntFunc(makeFormList(forms))))
+               | Absyn.CHARty => (Env.insert (env, name, CharFunc(makeFormList(forms))))
+               | Absyn.VOIDty => (Env.insert (env, name, VoidFunc(makeFormList(forms)))))
 
    and makeFormList [] = []
-     | makeFormList (f::fs) = 
-         case f of 
-           Absyn.VARDEC(Absyn.INTty,v) => 
-            (case v of 
+     | makeFormList (Absyn.VARDEC(Absyn.INTty, v)::fs) = 
+         (case v of 
                Absyn.VARdecl(_) => (Int::(makeFormList fs))
              | Absyn.ARRdecl(_,SOME i) => (IntArr(i)::(makeFormList fs))
              | Absyn.ARRdecl(_,NONE) => (IntArr(0)::(makeFormList fs)))
-             | Absyn.VARDEC(Absyn.CHARty,v) => 
-                (case v of 
-                   Absyn.VARdecl(_) => (Char::(makeFormList fs))
-                 | Absyn.ARRdecl(_,SOME i) => (CharArr(i)::(makeFormList fs))
-                 | Absyn.ARRdecl(_,NONE) => (CharArr(0)::(makeFormList fs)))
-                 | Absyn.VARDEC(Absyn.VOIDty,_) => makeFormList fs
+     | makeFormList (Absyn.VARDEC(Absyn.CHARty, v)::fs) = 
+         (case v of 
+               Absyn.VARdecl(_) => (Char::(makeFormList fs))
+             | Absyn.ARRdecl(_,SOME i) => (CharArr(i)::(makeFormList fs))
+             | Absyn.ARRdecl(_,NONE) => (CharArr(0)::(makeFormList fs)))
+     | makeFormList (Absyn.VARDEC(Absyn.VOIDty, _)::fs) = makeFormList fs
 
-   fun process_declarations ([],env) = env
-     | process_declarations ((dec::decs),env) =
-         case dec of 
-           Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(id)) =>   
-             (case Env.find(env,id) of 
-                SOME _ => (idError("Identifier name is in use: ",id);
-                           process_declarations(decs,env)) 
-              | NONE   => (process_declarations(decs,Env.insert (env,id,Int))))
-         | Absyn.VARDEC(Absyn.CHARty,Absyn.VARdecl(id)) =>   
-            (case Env.find(env,id) of 
-               SOME _ => (idError("Identifier name is in use: ",id);
-                          process_declarations(decs,env)) 
-             | NONE   => (process_declarations(decs,Env.insert (env,id,Char))))
-         | Absyn.VARDEC(Absyn.VOIDty,Absyn.VARdecl(id)) =>   
-            (case Env.find(env,id) of 
-               SOME _ => (idError("Identifier name is in use: ",id);
-                          process_declarations(decs,env)) 
-             | NONE   => (process_declarations(decs,Env.insert (env,id,Void))))
-         | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(id,SOME i)) =>
-            (case Env.find(env,id) of 
-               SOME _ => (idError("Identifier name is in use: ",id);
-                          process_declarations(decs,env)) 
-             | NONE   => (process_declarations(decs,Env.insert (env,id,IntArr(i)))))
-         | Absyn.VARDEC(Absyn.CHARty,Absyn.ARRdecl(id,SOME i)) =>
-            (case Env.find(env,id) of 
-               SOME _ => (idError("Identifier name is in use: ",id);
-                          process_declarations(decs,env)) 
-             | NONE   => (process_declarations(decs,Env.insert (env,id,CharArr(i)))))
-         | Absyn.VARDEC(Absyn.VOIDty,Absyn.ARRdecl(id,SOME i)) =>
-            (case Env.find(env,id) of 
-               _ => (print("Array must be of type int or char!\n");
-                     process_declarations(decs,env))) 
-
-
-         | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(id,NONE)) =>
-            (case Env.find(env,id) of 
-               SOME _ => (print("Array name is in use!\n");
-                          process_declarations(decs,env)) 
-             | NONE   => (process_declarations(decs,Env.insert (env,id,IntArr(0)))))
-         | Absyn.VARDEC(Absyn.CHARty,Absyn.ARRdecl(id,NONE)) =>
-            (case Env.find(env,id) of 
-               SOME _ => (print("Array name is in use!\n");
-                          process_declarations(decs,env)) 
-             | NONE   => (process_declarations(decs,Env.insert (env,id,CharArr(0)))))
-         | Absyn.VARDEC(Absyn.VOIDty,Absyn.ARRdecl(id,NONE)) =>
-            (case Env.find(env,id) of 
-               _ => (print("Array must be of type int or char!\n");
-                     process_declarations(decs,env))) 
+   fun process_declarations [] env = env
+     | process_declarations (Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(id))::decs) env =
+          (case Env.find(env, id) of 
+             SOME _ => (idError("Identifier name is in use: ", id); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, Int)))
+     | process_declarations (Absyn.VARDEC(Absyn.CHARty,Absyn.VARdecl(id))::decs) env =   
+          (case Env.find(env, id) of 
+             SOME _ => (idError("Identifier name is in use: ", id); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, Char)))
+     | process_declarations(Absyn.VARDEC(Absyn.VOIDty,Absyn.VARdecl(id))::decs) env =   
+          (case Env.find(env, id) of 
+             SOME _ => (idError("Identifier name is in use: ", id); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, Void)))
+     | process_declarations(Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(id, SOME i))::decs) env =
+          (case Env.find(env, id) of 
+             SOME _ => (idError("Identifier name is in use: ", id); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, IntArr(i))))
+     | process_declarations (Absyn.VARDEC(Absyn.CHARty, Absyn.ARRdecl(id, SOME i))::decs) env =
+          (case Env.find(env, id) of 
+             SOME _ => (idError("Identifier name is in use: ",id); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, CharArr(i))))
+     | process_declarations (Absyn.VARDEC(Absyn.VOIDty, Absyn.ARRdecl(id, SOME i))::decs) env =
+          (print("Array must be of type int or char!\n"); process_declarations decs env)  
+     | process_declarations (Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(id, NONE))::decs) env =
+          (case Env.find(env,id) of 
+             SOME _ => (print("Array name is in use!\n"); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, IntArr(0))))
+     | process_declarations (Absyn.VARDEC(Absyn.CHARty, Absyn.ARRdecl(id, NONE))::decs) env =
+          (case Env.find(env,id) of 
+             SOME _ => (print("Array name is in use!\n"); process_declarations decs env) 
+           | NONE   => process_declarations decs (Env.insert(env, id, CharArr(0))))
+     | process_declarations (Absyn.VARDEC(Absyn.VOIDty, Absyn.ARRdecl(id, NONE))::decs) env =
+          (print("Array must be of type int or char!\n"); process_declarations decs env) 
                                   
    (* type checker module *)
 
-   fun checkExp (ex,env) = 
-     case ex of 
-       Absyn.EXP(Absyn.CONST(Absyn.INTcon (i)),_,_) => Int
-     | Absyn.EXP(Absyn.VAR(id),left,right) => 
-         (case Env.find'(env,id) of 
-            SOME (_,t) => t 
-          | NONE => (expError("Identifier not defined",
-                     Absyn.EXP(Absyn.VAR(id),left,right));Error))
+   fun check_expression (Absyn.EXP(Absyn.CONST(Absyn.INTcon(i)), _, _)) _ = Int
+     | check_expression (Absyn.EXP(Absyn.VAR(id), left, right)) env = 
+         (case Env.find'(env, id) of 
+            SOME (_, t) => t 
+          | NONE => (expError("Identifier not defined", Absyn.EXP(Absyn.VAR(id), left, right)); Error))
+     | check_expression (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)) env = 
+         (case Env.find'(env, id) of 
+            SOME (_, IntArr(_)) => check_expression exp env
+          | SOME (_, CharArr(_)) => check_expression exp env
+          | SOME (_, Int)  => (expError("Indexing integer:", Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error)
+          | SOME (_, Char) => (expError("Indexing character:", Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error)
+          | _  => (expError("Undefined Array: ", Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error))
 
-     | Absyn.EXP(Absyn.ARRAY(id,exp),left,right) => 
-         (case Env.find'(env,id) of 
-            SOME (_,t) => (case t of 
-                             IntArr(_) => checkExp(exp,env)
-                           | CharArr(_) => checkExp(exp,env)
-                           | Int => (expError("Indexing integer: ",
-                                     Absyn.EXP(Absyn.ARRAY(id,exp),left,right));Error)
-                           | Char => (expError("Indexing character: ",
-                                      Absyn.EXP(Absyn.ARRAY(id,exp),left,right));Error)
-                           | _    => (expError("Undefined Array: ",
-                                      Absyn.EXP(Absyn.ARRAY(id,exp),left,right));Error))
-                                                                                                                                                      | NONE => (expError("Undefined Array: ",
-                     Absyn.EXP(Absyn.ARRAY(id,exp),left,right));Error))
-     | Absyn.EXP(Absyn.ASSIGN(exp1,exp2),left,right) => 
+     | check_expression (Absyn.EXP(Absyn.ASSIGN(exp1, exp2), left, right)) env = 
          let 
-           val lht = checkExp(exp1,env)
-           val rht = checkExp(exp2,env)
+           val lht = check_expression exp1 env
+           val rht = check_expression exp2 env
          in 
-           if (isLvalue lht exp1) then    
-           (if isCompatible(lht,rht) then rht else 
-           (expError("right hand side and left hand side of assign are not convertibel",
-            Absyn.EXP(Absyn.ASSIGN(exp1,exp2),left,right));Error))  
-            else (expError("Left hand side of assignment is not a l-value",
-            Absyn.EXP(Absyn.ASSIGN(exp1,exp2),left,right));Error)
+           if not (is_left_value lht exp1) then 
+             (expError("Left hand side of assignment is not a l-value", Absyn.EXP(Absyn.ASSIGN(exp1, exp2), left, right)); Error)
+           else if not (are_compatible lht rht) then 
+             (expError("Right hand side and left hand side of assign are not convertibel",
+              Absyn.EXP(Absyn.ASSIGN(exp1,exp2),left,right)); Error)  
+           else rht 
          end
-    | Absyn.EXP(Absyn.UNARY(uo,exp),left,right) => 
-        (case checkExp(exp,env) of 
+    | check_expression (Absyn.EXP(Absyn.UNARY(uo, exp), left, right)) env = 
+        (case check_expression exp env of 
            Int => Int
          | Char => Char
          | _    => (expError("unary operator is not applicable",
-                    Absyn.EXP(Absyn.UNARY(uo,exp),left,right));Error))
-    | Absyn.EXP(Absyn.BINARY(bo,ex1,ex2),left,right) => 
-        (case checkExp(ex1,env) of 
-           Int => (case checkExp(ex2,env) of 
+                    Absyn.EXP(Absyn.UNARY(uo, exp), left, right)); Error))
+    | check_expression (Absyn.EXP(Absyn.BINARY(bo, ex1, ex2), left, right)) env = 
+        (case check_expression ex1 env of 
+           Int => (case check_expression ex2 env of 
                      Int => Int
                    | Char => Char
                    | _   => (expError("RHS of binary operator is not applicable",
-                             Absyn.EXP(Absyn.BINARY(bo,ex1,ex2),left,right));Error))
-         | Char => (case checkExp(ex2,env) of 
+                             Absyn.EXP(Absyn.BINARY(bo, ex1, ex2), left, right)); Error))
+         | Char => (case check_expression ex2 env of 
                       Int => Int
                     | Char => Char
                     | _   => (expError("RHS of binary operator is not applicable",
-                              Absyn.EXP(Absyn.BINARY(bo,ex1,ex2),left,right));Error))
+                              Absyn.EXP(Absyn.BINARY(bo, ex1, ex2), left, right)); Error))
          | _ => (expError("LHS of binary operator is not applicable",
-                 Absyn.EXP(Absyn.BINARY(bo,ex1,ex2),left,right));Error))
-    | Absyn.EXP(Absyn.FCALL(id,exlist),left,right) => 
-        (case Env.find'(env,id) of 
-           SOME (_,IntFunc(t)) => 
+                 Absyn.EXP(Absyn.BINARY(bo, ex1, ex2), left, right)); Error))
+    | check_expression (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)) env = 
+        (case Env.find'(env, id) of 
+           SOME (_, IntFunc(t)) => 
              if List.length(t) > (List.length(exlist)) then 
-             (expError("Too few arguments to function",
-              Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error) 
-             else (if List.length(t) < (List.length(exlist)) then 
-                   (expError("Too many arguments to function",
-                    Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error) 
-                   else (if matchArgs ((exlist,t),env) then Int 
-                         else (expError("Unexpected argument type to the function",
-                               Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error)))
-         | SOME (_,CharFunc(t)) => 
+               (expError("Too few arguments to function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+             else if List.length(t) < (List.length(exlist)) then 
+               (expError("Too many arguments to function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+             else if match_arguments exlist t env then Int 
+             else (expError("Unexpected argument type to the function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
+         | SOME (_, CharFunc(t)) => 
              if List.length(t) > (List.length(exlist)) then 
-             (expError("Too few arguments to function",
-              Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error) 
-             else (if List.length(t) < (List.length(exlist)) then 
-                   (expError("Too many arguments to function: ",
-                    Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error) 
-                   else (if matchArgs ((exlist,t),env) then Char 
-                         else (expError("Unexpected argument type to the function",
-                               Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error)))
+               (expError("Too few arguments to function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+             else if List.length(t) < (List.length(exlist)) then 
+               (expError("Too many arguments to function: ", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+             else if match_arguments exlist t env then Char 
+             else (expError("Unexpected argument type to the function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
          (* fix this *)
-         | SOME (_,VoidFunc(t)) => 
+         | SOME (_, VoidFunc(t)) => 
              if List.length(t) > (List.length(exlist)) then 
-             (expError("Too few arguments to function",
-              Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error) 
-             else (if List.length(t) < (List.length(exlist)) then 
-                  (expError("Too many arguments to function",
-                   Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error) 
-                  else (if matchArgs ((exlist,t),env) then Void 
-                        else (expError("Unexpected argument type to the function",
-                              Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error))) 
-         | _ => (expError("is not a function",
-                 Absyn.EXP(Absyn.FCALL(id,exlist),left,right));Error))
-        
-   and isLvalue lht exp = 
+               (expError("Too few arguments to function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+             else if List.length(t) < (List.length(exlist)) then 
+               (expError("Too many arguments to function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+             else if match_arguments exlist t env then Void 
+             else (expError("Unexpected argument type to the function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+         | _ => (expError("Is not a function", Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error))
+   and is_left_value lht exp = 
      case lht of  
-       Int => if (checkVar exp) 
-              then true else false  
-     | Char  => if (checkVar exp) then true else false  
-     | IntArr(_) => if (checkArr exp) then true else false
-     | CharArr(_) => if (checkArr exp) then true else false
+       Int => check_var exp   
+     | Char  => check_var exp   
+     | IntArr(_) => check_array exp
+     | CharArr(_) => check_array exp
      | _ => false
-   and checkArr exp = 
-     case exp of 
-       Absyn.EXP(Absyn.VAR(_),_,_) => false
-     | Absyn.EXP(Absyn.ARRAY(_,_),_,_) => true
-     | Absyn.EXP(Absyn.CONST(Absyn.INTcon (_)),_,_) => false
-     | _ => false
-   and checkVar exp = 
-     case exp of 
-       Absyn.EXP(Absyn.VAR(_),_,_) => true
-     | Absyn.EXP(Absyn.ARRAY(_,_),_,_) => true
-     | Absyn.EXP(Absyn.CONST(Absyn.INTcon (_)),_,_) => false
-     | _ => false
-   and isCompatible (lhTy,rhTy) = 
-     case lhTy of Int => 
-       (case rhTy of 
-          Char => true 
-        | Int => true
-        | IntFunc(_)   => true
-        | CharFunc(_)  => true
-        | _            => false)
-        | Char => (case rhTy of 
-                     Char => true 
-                   | Int => true
-                   | IntFunc(_)   => true
-                   | CharFunc(_)  => true
-                   | _            => false)
-        | IntArr(_) => (case rhTy of 
-                          CharArr(_) => true 
-                        | IntArr(_) => true
-                        | _  => false)
-        | CharArr(_) => (case rhTy of 
-                           CharArr(_) => true 
-                         | IntArr(_) => false
-                         | _   => false)
-        | _ => false
-   and matchArgs (([],_),env) = true 
-     | matchArgs((_,[]),env) = true
-     | matchArgs (((r::rs),(f::fs)),env) = 
+   and check_array (Absyn.EXP(Absyn.VAR(_), _, _)) = false 
+     | check_array (Absyn.EXP(Absyn.ARRAY(_, _), _, _)) = true
+     | check_array (Absyn.EXP(Absyn.CONST(Absyn.INTcon(_)), _, _)) = false
+     | check_array _ = false
+   and check_var (Absyn.EXP(Absyn.VAR(_), _, _)) = true 
+     | check_var (Absyn.EXP(Absyn.ARRAY(_, _), _, _)) = true
+     | check_var (Absyn.EXP(Absyn.CONST(Absyn.INTcon (_)), _, _)) = false
+     | check_var _ = false
+   and are_compatible (Int) (Char) = true
+     | are_compatible (Int) (Int)  = true  
+     | are_compatible (Int) (IntFunc(_))  = true  
+     | are_compatible (Int) (CharFunc(_))  = true  
+     | are_compatible (Int) _  = false  
+     | are_compatible (Char) (Char) = true
+     | are_compatible (Char) (Int) = true
+     | are_compatible (Char) (IntFunc(_)) = true
+     | are_compatible (Char) (CharFunc(_)) = true
+     | are_compatible (Char) _ = false
+     | are_compatible (IntArr(_)) (IntArr(_)) = true
+     | are_compatible (IntArr(_)) (CharArr(_)) = true
+     | are_compatible (IntArr(_)) _ = false
+     | are_compatible (CharArr(_)) (CharArr(_)) = true
+     | are_compatible (CharArr(_)) (IntArr(_)) = false
+     | are_compatible (CharArr(_)) _ = false
+     | are_compatible _ _ = false
+   and match_arguments [] _ env = true 
+     | match_arguments _ [] env = true
+     | match_arguments (r::rs) (f::fs) env = 
          let 
-           val rt =  checkExp(r,env)
+           val rt =  check_expression r env
          in 
-           if isCompatible(rt,f) then matchArgs ((rs,fs),env) else false
+           if are_compatible rt f then match_arguments rs fs env else false
          end
+
    fun analyzeBody (name,ret,body,env) =
      case body of 
        Absyn.STMT(Absyn.EMPTY,_,_) => env
-     | Absyn.STMT(Absyn.EFFECT(exp),_,_) => (checkExp (exp,env);env)
-     | Absyn.STMT(Absyn.IF(exp,stmt,SOME st),_,_) => (checkExp(exp,env);analyzeBody(name,ret,stmt,env);
+     | Absyn.STMT(Absyn.EFFECT(exp),_,_) => (check_expression exp env; env)
+     | Absyn.STMT(Absyn.IF(exp,stmt,SOME st),_,_) => (check_expression exp env; analyzeBody(name,ret,stmt,env);
                                                       analyzeBody(name,ret,st,env);env)
-     | Absyn.STMT(Absyn.IF(exp,stmt,NONE),_,_) => (checkExp(exp,env);analyzeBody(name,ret,stmt,env);env)
-     | Absyn.STMT(Absyn.WHILE(exp,stmt),_,_) => (checkExp(exp,env);analyzeBody(name,ret,stmt,env);env)
+     | Absyn.STMT(Absyn.IF(exp,stmt,NONE),_,_) => (check_expression exp env; analyzeBody(name,ret,stmt,env);env)
+     | Absyn.STMT(Absyn.WHILE(exp,stmt),_,_) => (check_expression exp env; analyzeBody(name,ret,stmt,env);env)
      | Absyn.STMT(Absyn.SEQ(st1,st2),_,_) => (analyzeBody(name,ret,st1,env);analyzeBody(name,ret,st2,env);env)
      | Absyn.STMT(Absyn.RETURN(SOME exp),left,right) => 
-         let val retTy = checkExp(exp,env) 
+         let val retTy = check_expression exp env 
          in
            (case ret of 
               Absyn.VOIDty => (stmtError("function cannot return a value",
@@ -346,18 +294,18 @@ struct
    fun analyzeFunc (name,form,ret,loc,body,env) =
      let 
        val locForm = (form@loc)
-       val envGlob = checkFunction (name,form,ret,env)
+       val envGlob = check_function name form ret env
        val envFunc = Env.empty
-       val envLoc = process_declarations (locForm,envFunc)
+       val envLoc = process_declarations locForm envFunc
        val env2 = Env.plus (envGlob,envLoc)
      in 
        (analyzeBody(name,ret,body,env2);envGlob)
      end
-   fun checkExtern (name,formals,retTy,env) = checkFunction (name,formals,retTy,env)
+   fun checkExtern (name,formals,retTy,env) = check_function name formals retTy env
    (***********************************************************************)
    fun checkDeck (env,dec) =
      case dec of 
-       Absyn.GLOBAL(Absyn.VARDEC(t,d))  => checkGlobal t d env
+       Absyn.GLOBAL(Absyn.VARDEC(t,d))  => check_globals t d env
      | Absyn.FUNC{name,formals,retTy,locals,body} => analyzeFunc (name,formals,retTy,locals,body,env)
      | Absyn.EXTERN{name,formals,retTy} => checkExtern (name,formals,retTy,env)
 
