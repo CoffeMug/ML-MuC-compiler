@@ -171,10 +171,11 @@ struct
            val rht = check_expression exp2 env
          in 
            if not (is_left_value lht exp1) then 
-             (exp_err "Left hand side of assignment is not a l-value" (Absyn.EXP(Absyn.ASSIGN(exp1, exp2), left, right)); Error)
+             (exp_err "Left hand side of assignment is not a l-value" 
+             (Absyn.EXP(Absyn.ASSIGN(exp1, exp2), left, right)); Error)
            else if not (are_compatible lht rht) then 
              (exp_err "Right hand side and left hand side of assign are not convertibel"
-              (Absyn.EXP(Absyn.ASSIGN(exp1,exp2),left,right)); Error)  
+             (Absyn.EXP(Absyn.ASSIGN(exp1,exp2),left,right)); Error)  
            else rht 
          end
     | check_expression (Absyn.EXP(Absyn.UNARY(uo, exp), left, right)) env = 
@@ -201,27 +202,40 @@ struct
         (case Env.find'(env, id) of 
            SOME (_, IntFunc(t)) => 
              if List.length(t) > (List.length(exlist)) then 
-               (exp_err "Too few arguments to function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+               (exp_err "Too few arguments to function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if List.length(t) < (List.length(exlist)) then 
-               (exp_err "Too many arguments to function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+               (exp_err "Too many arguments to function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if match_arguments exlist t env then Int 
-             else (exp_err "Unexpected argument type to the function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
+             else 
+               (exp_err "Unexpected argument type to the function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
          | SOME (_, CharFunc(t)) => 
              if List.length(t) > (List.length(exlist)) then 
-               (exp_err "Too few arguments to function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+               (exp_err "Too few arguments to function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if List.length(t) < (List.length(exlist)) then 
-               (exp_err "Too many arguments to function: " (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+               (exp_err "Too many arguments to function: " 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if match_arguments exlist t env then Char 
-             else (exp_err "Unexpected argument type to the function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
+             else 
+               (exp_err "Unexpected argument type to the function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
          (* fix this *)
          | SOME (_, VoidFunc(t)) => 
              if List.length(t) > (List.length(exlist)) then 
-               (exp_err "Too few arguments to function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+               (exp_err "Too few arguments to function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if List.length(t) < (List.length(exlist)) then 
-               (exp_err "Too many arguments to function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+               (exp_err "Too many arguments to function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if match_arguments exlist t env then Void 
-             else (exp_err "Unexpected argument type to the function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
-         | _ => (exp_err "Is not a function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error))
+             else 
+               (exp_err "Unexpected argument type to the function" 
+               (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
+         | _ => 
+               (exp_err "Is not a function" (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error))
    and is_left_value (Int) exp = check_var exp   
      | is_left_value (Char) exp  = check_var exp   
      | is_left_value (IntArr(_)) exp  = check_array exp
