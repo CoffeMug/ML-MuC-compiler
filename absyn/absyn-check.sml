@@ -156,14 +156,18 @@ struct
      | check_expression (Absyn.EXP(Absyn.VAR(id), left, right)) env = 
          (case Env.find'(env, id) of 
             SOME (_, t) => t 
-          | NONE => (exp_err "Identifier not defined" (Absyn.EXP(Absyn.VAR(id), left, right)); Error))
+          | NONE => (exp_err "Identifier not defined" 
+                    (Absyn.EXP(Absyn.VAR(id), left, right)); Error))
      | check_expression (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)) env = 
          (case Env.find'(env, id) of 
             SOME (_, IntArr(_)) => check_expression exp env
           | SOME (_, CharArr(_)) => check_expression exp env
-          | SOME (_, Int)  => (exp_err "Indexing integer:" (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error)
-          | SOME (_, Char) => (exp_err "Indexing character:" (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error)
-          | _  => (exp_err "Undefined Array: " (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error))
+          | SOME (_, Int)  => (exp_err "Indexing integer:" 
+                              (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error)
+          | SOME (_, Char) => (exp_err "Indexing character:" 
+                              (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error)
+          | _  => (exp_err "Undefined Array: " 
+                  (Absyn.EXP(Absyn.ARRAY(id, exp), left, right)); Error))
 
      | check_expression (Absyn.EXP(Absyn.ASSIGN(exp1, exp2), left, right)) env = 
          let 
