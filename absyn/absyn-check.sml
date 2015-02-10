@@ -42,7 +42,6 @@ struct
   fun stmt_err msg (Absyn.STMT(_, left, right)) = do_err (msg, left, right)
 
   (*
-   * YOUR CODE HERE
    *
    * Hints:
    * - You need to represent uC types.
@@ -54,7 +53,6 @@ struct
    * - You need to process top-level declarations.
    *)
 
-   (* XXX: REPLACE WITH YOUR CODE *)
    (* environment *)
    structure Env = Absyn.IdentDict
 
