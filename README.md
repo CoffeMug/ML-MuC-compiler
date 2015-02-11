@@ -7,7 +7,7 @@ Example usage:
 
     ./ucc.sh testsuit/noisy/simple/sim09.c
 
-will create a sim09.s assembly file.
+will create a sim09.s assembly file in the current directory.
 
 To compile and run it you have to use a MIPS emulator such as SPIM:
 
