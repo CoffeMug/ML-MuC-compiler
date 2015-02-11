@@ -1,6 +1,5 @@
 (* mips/mips-codegen.sml *)
 
-
 functor MIPSCodegenFn(structure RTL : RTL
 		      structure MIPS : MIPS
 			) : CODEGEN =
@@ -11,12 +10,8 @@ struct
 
   (* help variables and functions *)
   val env = []
-
   val bEnv = []
-
   val varTrack = []
- 
-
   val formal_temp_counter = ref 1
 
   fun tick counter =
@@ -31,35 +26,22 @@ struct
     in 
       !i
     end
-
-  fun first (a,_) = a
-  fun second (_,b) = b
  
-  fun find tm [] = false
-    | find tm (t::ts) = if tm = t then true else find tm ts 
+  fun find term term_list = List.exists (fn x => x = term) term_list 
 
-  fun find_index tm [] = (false,0)
-    | find_index tm ((t,i)::ts) = if tm = t then (true,i) 
-                                  else find_index tm ts 
+  fun find_index term [] = (false,0)
+    | find_index term ((t,i)::ts) = 
+        if term = t then (true,i)
+        else find_index term ts 
 
   fun make_index_list [] _ = []
-    | make_index_list (t::ts) cntr = 
-      let val cntr' = ref (tick cntr) 
+    | make_index_list (t::ts) counter = 
+      let val counter' = ref (tick counter) 
       in 
-        (t,!cntr')::(make_index_list ts cntr')
+        (t,!counter')::(make_index_list ts counter')
       end
 
-  fun insert tm en = if find tm en then en else tm::en
-
-  fun mem _ [] = false
-    | mem v (x::xs) = if v = x then true else mem v xs
-
-
-  fun checkVar lb = String.isPrefix "V" lb 
-
-  fun printVarTrack [] = ()
-    | printVarTrack (l::ls) = (print(Int.toString(l));printVarTrack (ls))
-
+  fun insert term en = if find term en then en else term::en
 
   fun f_call_tmp_aloc [] _ _ _ _ _ _ _ = []
     | f_call_tmp_aloc (t::tl) lb frms locals env varTrack bEnv frms_index_list =
@@ -73,7 +55,6 @@ struct
             Assem.INSTRUCTION(Assem.store(8,29,~4*length(tl)))::
             f_call_tmp_aloc tl lb frms locals env varTrack bEnv frms_index_list
           end
-        
         else if (find t frms) andalso not (find t locals) then
           let val (_,index) = find_index t frms_index_list in    
              Assem.INSTRUCTION(Assem.load(8,30, (index * 4)))::
@@ -152,11 +133,9 @@ struct
           Assem.INSTRUCTION(Assem.store(8,29,t*4))::
           (checkIns insns frms locals env varTrack bEnv frms_index_list bogus)
 
-
       | RTL.JUMP (lb) =>  Assem.INSTRUCTION(Assem.JUMP(Assem.B(lb)))::(checkIns insns frms locals env varTrack bEnv frms_index_list bogus)
 
       | RTL.LABDEF (lb)=>  Assem.INSTRUCTION(Assem.label(lb))::(checkIns insns frms locals env varTrack bEnv frms_index_list bogus)
-
 
       | RTL.STORE (ty,tmp1,tmp2) => 
           let val (findTm1,index1) = find_index tmp1 frms_index_list 
@@ -653,7 +632,7 @@ struct
                end
          
          | RTL.LABREF (lb) => 
-               if checkVar lb then 
+               if (String.isPrefix "V" lb) then 
                  let val varTrack' = insert tmp varTrack
                in
                  Assem.INSTRUCTION(Assem.OPER(Assem.LA(8,lb)))::
