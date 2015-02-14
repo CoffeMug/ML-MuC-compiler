@@ -9,9 +9,6 @@ struct
   structure Assem = MIPS
 
   (* help variables and functions *)
-  val env = []
-  val bEnv = []
-  val varTrack = []
 
   fun tick counter =
     let val i = !counter + 1
@@ -64,14 +61,14 @@ struct
           Assem.INSTRUCTION(Assem.store(8,29,~4*length(tl)))::
           f_call_tmp_aloc tl lb frms locals env varTrack bEnv frmsIndexList
 
-  fun program p = program_to_asm p env varTrack bEnv
+  (* main program with empty list of initials *)
+  fun program p = program_to_asm p [] [] []
 
   and program_to_asm (RTL.PROGRAM([])) _ _ _ = system_calls ()
     | program_to_asm (RTL.PROGRAM(d::dlist)) env varTrack bEnv = 
       (rtl_to_asm d env varTrack bEnv)@(program_to_asm (RTL.PROGRAM(dlist)) env varTrack bEnv)
 
-  and rtl_to_asm (RTL.DATA {label,size}) _ _ _ =  
-      data label size 
+  and rtl_to_asm (RTL.DATA {label,size}) _ _ _ = data label size 
     | rtl_to_asm (RTL.PROC {label,formals,locals,frameSize,insns}) env varTrack bEnv = 
       procedure label formals locals frameSize insns env varTrack bEnv
 
@@ -79,7 +76,7 @@ struct
       Assem.DATASEG::
       Assem.ALIGN(2)::
       Assem.INSTRUCTION(Assem.LABEL(label))::
-      Assem.SPACE(size)::[]
+      [Assem.SPACE(size)]
 
   and procedure "Pcheck" frms locals fs inss env varTrack bEnv = 
       let 

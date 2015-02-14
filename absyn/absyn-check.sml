@@ -99,22 +99,22 @@ struct
      (case Env.find(env, name) of 
         SOME (_) => (id_err "Identifier name is in use: " name; env) 
       | _   => case ret of 
-                 Absyn.INTty  => (Env.insert (env, name, IntFunc(makeFormList(forms))))
-               | Absyn.CHARty => (Env.insert (env, name, CharFunc(makeFormList(forms))))
-               | Absyn.VOIDty => (Env.insert (env, name, VoidFunc(makeFormList(forms)))))
+                 Absyn.INTty  => (Env.insert (env, name, IntFunc(make_form_list(forms))))
+               | Absyn.CHARty => (Env.insert (env, name, CharFunc(make_form_list(forms))))
+               | Absyn.VOIDty => (Env.insert (env, name, VoidFunc(make_form_list(forms)))))
 
-   and makeFormList [] = []
-     | makeFormList (Absyn.VARDEC(Absyn.INTty, v)::fs) = 
+   and make_form_list [] = []
+     | make_form_list (Absyn.VARDEC(Absyn.INTty, v)::fs) = 
          (case v of 
-               Absyn.VARdecl(_) => (Int::(makeFormList fs))
-             | Absyn.ARRdecl(_,SOME i) => (IntArr(i)::(makeFormList fs))
-             | Absyn.ARRdecl(_,NONE) => (IntArr(0)::(makeFormList fs)))
-     | makeFormList (Absyn.VARDEC(Absyn.CHARty, v)::fs) = 
+               Absyn.VARdecl(_) => (Int::(make_form_list fs))
+             | Absyn.ARRdecl(_,SOME i) => (IntArr(i)::(make_form_list fs))
+             | Absyn.ARRdecl(_,NONE) => (IntArr(0)::(make_form_list fs)))
+     | make_form_list (Absyn.VARDEC(Absyn.CHARty, v)::fs) = 
          (case v of 
-               Absyn.VARdecl(_) => (Char::(makeFormList fs))
-             | Absyn.ARRdecl(_,SOME i) => (CharArr(i)::(makeFormList fs))
-             | Absyn.ARRdecl(_,NONE) => (CharArr(0)::(makeFormList fs)))
-     | makeFormList (Absyn.VARDEC(Absyn.VOIDty, _)::fs) = makeFormList fs
+               Absyn.VARdecl(_) => (Char::(make_form_list fs))
+             | Absyn.ARRdecl(_,SOME i) => (CharArr(i)::(make_form_list fs))
+             | Absyn.ARRdecl(_,NONE) => (CharArr(0)::(make_form_list fs)))
+     | make_form_list (Absyn.VARDEC(Absyn.VOIDty, _)::fs) = make_form_list fs
 
    fun process_declarations [] env = env
      | process_declarations (Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(id))::decs) env =
@@ -151,7 +151,6 @@ struct
           (print("Array must be of type int or char!\n"); process_declarations decs env) 
                                   
    (* type checker module *)
-
    fun check_expression (Absyn.EXP(Absyn.CONST(Absyn.INTcon(i)), _, _)) _ = Int
      | check_expression (Absyn.EXP(Absyn.VAR(id), left, right)) env = 
          (case Env.find'(env, id) of 
@@ -205,10 +204,10 @@ struct
     | check_expression (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)) env = 
         (case Env.find'(env, id) of 
            SOME (_, IntFunc(t)) => 
-             if List.length(t) > (List.length(exlist)) then 
+             if List.length(t) > List.length(exlist) then 
                (exp_err "Too few arguments to function" 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
-             else if List.length(t) < (List.length(exlist)) then 
+             else if List.length(t) < List.length(exlist) then 
                (exp_err "Too many arguments to function" 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if match_arguments exlist t env then Int 
@@ -216,10 +215,10 @@ struct
                (exp_err "Unexpected argument type to the function" 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
          | SOME (_, CharFunc(t)) => 
-             if List.length(t) > (List.length(exlist)) then 
+             if List.length(t) > List.length(exlist) then 
                (exp_err "Too few arguments to function" 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
-             else if List.length(t) < (List.length(exlist)) then 
+             else if List.length(t) < List.length(exlist) then 
                (exp_err "Too many arguments to function: " 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if match_arguments exlist t env then Char 
@@ -228,10 +227,10 @@ struct
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error)
          (* fix this *)
          | SOME (_, VoidFunc(t)) => 
-             if List.length(t) > (List.length(exlist)) then 
+             if List.length(t) > List.length(exlist) then 
                (exp_err "Too few arguments to function" 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
-             else if List.length(t) < (List.length(exlist)) then 
+             else if List.length(t) < List.length(exlist) then 
                (exp_err "Too many arguments to function" 
                (Absyn.EXP(Absyn.FCALL(id, exlist), left, right)); Error) 
              else if match_arguments exlist t env then Void 
@@ -306,6 +305,7 @@ struct
                             (Absyn.STMT(Absyn.RETURN(NONE), left, right)); env)
           | Absyn.CHARty => (stmt_err "function must return character"
                             (Absyn.STMT(Absyn.RETURN(NONE), left, right)); env))
+
    fun analyze_function name form ret loc body env =
      let 
        val locForm = (form@loc)
@@ -319,30 +319,22 @@ struct
    fun check_external name formals retTy env = check_function name formals retTy env
 
    (***********************************************************************)
-   fun check_declaration env dec =
-     case dec of 
-       Absyn.GLOBAL(Absyn.VARDEC(t, d))  => check_globals t d env
-     | Absyn.FUNC{name,formals,retTy,locals,body} => 
+   fun check_declaration (Absyn.GLOBAL(Absyn.VARDEC(t, d))) env = check_globals t d env
+     | check_declaration (Absyn.FUNC{name,formals,retTy,locals,body}) env = 
           analyze_function name formals retTy locals body env
-     | Absyn.EXTERN{name,formals,retTy} => 
+     | check_declaration (Absyn.EXTERN{name,formals,retTy}) env = 
           check_external name formals retTy env
 
-   (* Auxiliary function to traverse the list of declarations *)
-   fun check_declarations' [] _ = ()
-     | check_declarations' (dec::decs) env = 
-         let val env' = check_declaration env dec
-         in 
-           check_declarations' decs env'
+   fun check_declarations [] _ = ()
+     | check_declarations (dec::decs) env =
+         let val updateEnv = check_declaration dec env
+         in
+           check_declarations decs updateEnv
          end
 
-   (* initial empty environment *)
-   val en = Env.empty 
-
-   fun check_declarations decs = check_declarations' decs en
-
-   (* Programs *)
+   (* Programs with initial empty environment *)
    fun program(Absyn.PROGRAM{decs,source}) =
-     let fun check() = check_declarations decs 
+     let fun check () = check_declarations decs Env.empty
      in
        with_source source check
      end
