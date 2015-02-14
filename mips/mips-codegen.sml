@@ -12,7 +12,6 @@ struct
   val env = []
   val bEnv = []
   val varTrack = []
-  val formal_temp_counter = ref 1
 
   fun tick counter =
     let val i = !counter + 1
@@ -27,12 +26,7 @@ struct
     | find_index term ((t,i)::ts) =
         if t=term then (true,i) else find_index term ts
 
-  fun make_index_list [] _ = []
-    | make_index_list (t::ts) counter = 
-      let val counter' = ref (tick counter) 
-      in 
-        (t, !counter')::(make_index_list ts counter')
-      end
+  fun make_index_list ts counter = List.map (fn x => (x, !(ref (tick counter)))) ts
 
   fun insert term en = if find term en then en else term::en
 
@@ -77,11 +71,16 @@ struct
     | program_to_asm (RTL.PROGRAM(d::dlist)) env varTrack bEnv = 
       (rtl_to_asm d env varTrack bEnv)@(program_to_asm (RTL.PROGRAM(dlist)) env varTrack bEnv)
 
-  and rtl_to_asm dec env varTrack bEnv = 
-    case dec of     
-      RTL.DATA {label,size} => data (label, size) 
-    | RTL.PROC {label,formals,locals,frameSize,insns} => 
-        procedure label formals locals frameSize insns env varTrack bEnv
+  and rtl_to_asm (RTL.DATA {label,size}) _ _ _ =  
+      data label size 
+    | rtl_to_asm (RTL.PROC {label,formals,locals,frameSize,insns}) env varTrack bEnv = 
+      procedure label formals locals frameSize insns env varTrack bEnv
+
+  and data label size = 
+      Assem.DATASEG::
+      Assem.ALIGN(2)::
+      Assem.INSTRUCTION(Assem.LABEL(label))::
+      Assem.SPACE(size)::[]
 
   and procedure "Pcheck" frms locals fs inss env varTrack bEnv = 
       let 
@@ -103,12 +102,6 @@ struct
 		  Assem.TEXT::Assem.INSTRUCTION(Assem.label(lb))::
 		  calle_save(i)@(check_instructions inss frms locals env varTrack bEnv frmsIndexList bogus)@return_inst(i)
 	  end
-
-  and data (label, size) = 
-      Assem.DATASEG::
-      Assem.ALIGN(2)::
-      Assem.INSTRUCTION(Assem.LABEL(label))::
-      Assem.SPACE(size)::[]
 
   and check_instructions [] _ _ _ _ _ _ _ = []
     | check_instructions ((RTL.CALL (SOME t, label, tmlist))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
