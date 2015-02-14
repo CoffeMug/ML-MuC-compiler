@@ -4,6 +4,8 @@ MLCCompiler
 A MuC compiler written in StandardML.
 
 Example usage:
+Run make in the top level directory to create the MIPS compiler.
+Then use the ucc.sh script to create MIPS assebly code from MuC source:
 
     ./ucc.sh testsuit/noisy/simple/sim09.c
 
