@@ -48,7 +48,8 @@ struct
              Assem.INSTRUCTION(Assem.store(8,29,~4*length(tl)))::
              f_call_tmp_aloc tl lb frms locals env varTrack bEnv frmsIndexList
           end
-        else if (lb = "putint") andalso not (find t varTrack) andalso (find t env) andalso (find t bEnv) then  
+        else if (lb = "putint") andalso not (find t varTrack) andalso 
+        (find t env) andalso (find t bEnv) then  
           Assem.INSTRUCTION(Assem.load(8,29,t*4))::
           Assem.INSTRUCTION(Assem.OPER(Assem.LB(8,Assem.OFFSET(8,0))))::
           Assem.INSTRUCTION(Assem.store(8,29,~4*length(tl)))::
@@ -62,8 +63,6 @@ struct
           Assem.INSTRUCTION(Assem.load(8,29,t*4))::
           Assem.INSTRUCTION(Assem.store(8,29,~4*length(tl)))::
           f_call_tmp_aloc tl lb frms locals env varTrack bEnv frmsIndexList
-
-  (*************************************)
 
   fun program p = program_to_asm p env varTrack bEnv
 
