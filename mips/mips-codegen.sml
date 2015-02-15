@@ -9,7 +9,6 @@ struct
   structure Assem = MIPS
 
   (* help variables and functions *)
-
   fun tick counter =
     let val i = !counter + 1
         val _ = counter := i
@@ -61,45 +60,85 @@ struct
           Assem.INSTRUCTION(Assem.store(8,29,~4*length(tl)))::
           f_call_tmp_aloc tl lb frms locals env varTrack bEnv frmsIndexList
 
-  (* main program with empty list of initials *)
-  fun program p = program_to_asm p [] [] []
+  fun calle_save (i) = 
+      Assem.INSTRUCTION(Assem.addi(29,29,~i))::
+      Assem.INSTRUCTION(Assem.store(30,29,4))::
+      Assem.INSTRUCTION(Assem.store(31,29,8))::
+      Assem.INSTRUCTION(Assem.store(4,29,12))::
+      Assem.INSTRUCTION(Assem.addi(30,29,i))::[]
 
-  and program_to_asm (RTL.PROGRAM([])) _ _ _ = system_calls ()
-    | program_to_asm (RTL.PROGRAM(d::dlist)) env varTrack bEnv = 
-      (rtl_to_asm d env varTrack bEnv)@(program_to_asm (RTL.PROGRAM(dlist)) env varTrack bEnv)
+  fun return_inst (i) =
+      Assem.INSTRUCTION(Assem.load(2,29,12))::
+      Assem.INSTRUCTION(Assem.load(30,29,4))::
+      Assem.INSTRUCTION(Assem.load(31,29,8))::
+      Assem.INSTRUCTION(Assem.load(4,29,12))::
+      Assem.INSTRUCTION(Assem.addi(29,29,i))::
+      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::[]
 
-  and rtl_to_asm (RTL.DATA {label,size}) _ _ _ = data label size 
-    | rtl_to_asm (RTL.PROC {label,formals,locals,frameSize,insns}) env varTrack bEnv = 
-      procedure label formals locals frameSize insns env varTrack bEnv
-
-  and data label size = 
+  fun system_calls () = 
       Assem.DATASEG::
-      Assem.ALIGN(2)::
-      Assem.INSTRUCTION(Assem.LABEL(label))::
-      [Assem.SPACE(size)]
+      Assem.GLOBAL("putint")::
+      Assem.GLOBAL("putstring")::
+      Assem.GLOBAL("getint")::
+      Assem.GLOBAL("getstring")::
+      Assem.TEXT::
+      Assem.INSTRUCTION(Assem.label("putint"))::
+      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
+      Assem.INSTRUCTION(Assem.store(30,29,4))::
+      Assem.INSTRUCTION(Assem.store(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(30,29,24))::
+      Assem.INSTRUCTION(Assem.load(4,30,4))::
+      Assem.INSTRUCTION(Assem.load_imm(2,1))::
+      Assem.INSTRUCTION(Assem.syscall)::
+      Assem.INSTRUCTION(Assem.load(30,29,4))::
+      Assem.INSTRUCTION(Assem.load(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
+      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::
 
-  and procedure "Pcheck" frms locals fs inss env varTrack bEnv = 
-      let 
-		  val i = length(locals)*16 + length(frms)*16 + fs*16 + 2024 (* the size of stack *)
-		  val cntr = ref 0
-		  val frmsIndexList = make_index_list frms cntr
-		  val bogus = 1
-      in 
-		  Assem.TEXT::Assem.INSTRUCTION(Assem.label("Pcheck"))::
-		  calle_save(i)@(check_instructions inss frms locals env varTrack bEnv frmsIndexList bogus)@return_inst(i)
-      end
-    | procedure lb frms locals fs inss env varTrack bEnv =
-	  let 
-		  val i = length(locals)*16 + length(frms)*16 + fs*16 + 2024 (* the size of stack *)
-		  val cntr = ref 0
-		  val frmsIndexList = make_index_list frms cntr
-		  val bogus = 0
-	  in 
-		  Assem.TEXT::Assem.INSTRUCTION(Assem.label(lb))::
-		  calle_save(i)@(check_instructions inss frms locals env varTrack bEnv frmsIndexList bogus)@return_inst(i)
-	  end
+      Assem.TEXT::
+      Assem.INSTRUCTION(Assem.label("putstring"))::
+      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
+      Assem.INSTRUCTION(Assem.store(30,29,4))::
+      Assem.INSTRUCTION(Assem.store(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(30,29,24))::
+      Assem.INSTRUCTION(Assem.load(4,30,4))::
+      Assem.INSTRUCTION(Assem.load_imm(2,4))::
+      Assem.INSTRUCTION(Assem.syscall)::
+      Assem.INSTRUCTION(Assem.load(30,29,4))::
+      Assem.INSTRUCTION(Assem.load(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
+      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::
 
-  and check_instructions [] _ _ _ _ _ _ _ = []
+      Assem.TEXT::
+      Assem.INSTRUCTION(Assem.label("getint"))::
+      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
+      Assem.INSTRUCTION(Assem.store(30,29,4))::
+      Assem.INSTRUCTION(Assem.store(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(30,29,24))::
+      Assem.INSTRUCTION(Assem.load(4,30,4))::
+      Assem.INSTRUCTION(Assem.load_imm(2,5))::
+      Assem.INSTRUCTION(Assem.syscall)::
+      Assem.INSTRUCTION(Assem.load(30,29,4))::
+      Assem.INSTRUCTION(Assem.load(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
+      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::
+
+      Assem.TEXT::
+      Assem.INSTRUCTION(Assem.label("getstring"))::
+      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
+      Assem.INSTRUCTION(Assem.store(30,29,4))::
+      Assem.INSTRUCTION(Assem.store(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(30,29,24))::
+      Assem.INSTRUCTION(Assem.load(4,30,4))::
+      Assem.INSTRUCTION(Assem.load_imm(5,80))::
+      Assem.INSTRUCTION(Assem.load_imm(2,8))::
+      Assem.INSTRUCTION(Assem.syscall)::
+      Assem.INSTRUCTION(Assem.load(30,29,4))::
+      Assem.INSTRUCTION(Assem.load(31,29,8))::
+      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
+      [Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))]
+
+  fun check_instructions [] _ _ _ _ _ _ _ = []
     | check_instructions ((RTL.CALL (SOME t, label, tmlist))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
           f_call_tmp_aloc tmlist label frms locals env varTrack bEnv frmsIndexList @           
           Assem.INSTRUCTION(Assem.addi(29,29,~4*length(tmlist)))::
@@ -107,6 +146,13 @@ struct
           Assem.INSTRUCTION(Assem.MOVE(Assem.IMOVE(8,2)))::
           Assem.INSTRUCTION(Assem.addi(29,29,4*length(tmlist)))::
           Assem.INSTRUCTION(Assem.store(8,29,t*4))::
+          (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
+    | check_instructions ((RTL.CALL (NONE, label, tmlist))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
+          f_call_tmp_aloc tmlist label frms locals env varTrack bEnv frmsIndexList @           
+          Assem.INSTRUCTION(Assem.addi(29,29,~4*length(tmlist)))::
+          Assem.INSTRUCTION(Assem.JUMP(Assem.JAL(Assem.LAB(label))))::
+          Assem.INSTRUCTION(Assem.MOVE(Assem.IMOVE(8,2)))::
+          Assem.INSTRUCTION(Assem.addi(29,29,4*length(tmlist)))::
           (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
     | check_instructions ((RTL.JUMP (lb))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
           Assem.INSTRUCTION(Assem.JUMP(Assem.B(lb)))::(check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -218,7 +264,6 @@ struct
                         (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
                       else if find t1 varTrack then 
                         Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
-                        (*Assem.INSTRUCTION(Assem.load(8,8,0))::*)
                         Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
                         Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.ADD,10,8,9)))::
                         Assem.INSTRUCTION(Assem.store(10,29,tmp * 4))::
@@ -314,7 +359,6 @@ struct
                         (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
                       else 
                         Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
-                        (*Assem.INSTRUCTION(Assem.load(8,8,0))::*)
                         Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
                         Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.MUL,10,8,9)))::
                         Assem.INSTRUCTION(Assem.store(10,29,tmp * 4))::
@@ -486,7 +530,6 @@ struct
                         (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
                       else 
                         Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
-                        (*Assem.INSTRUCTION(Assem.load(8,8,0))::*)
                         Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
                         Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SUB,10,8,9)))::
                         Assem.INSTRUCTION(Assem.store(10,29,tmp * 4))::
@@ -1016,7 +1059,6 @@ struct
                         (if find t2 varTrack then 
                           Assem.INSTRUCTION(Assem.load(8,30,4*index))::
                           Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                          (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                           Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SGE,10,8,9)))::
                           Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                           (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1033,7 +1075,6 @@ struct
                         (if find t2 varTrack then 
                           Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                           Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                          (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                           Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SGE,10,8,9)))::
                           Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                           (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1191,7 +1232,6 @@ struct
                     Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                     Assem.INSTRUCTION(Assem.OPER(Assem.LB(8,Assem.OFFSET(8,0))))::
                     Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                    (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                     Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SEQ,10,8,9)))::
                     Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                     (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1490,81 +1530,45 @@ struct
                         (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
                     end
 
-  and calle_save (i) = 
-      Assem.INSTRUCTION(Assem.addi(29,29,~i))::
-      Assem.INSTRUCTION(Assem.store(30,29,4))::
-      Assem.INSTRUCTION(Assem.store(31,29,8))::
-      Assem.INSTRUCTION(Assem.store(4,29,12))::
-      Assem.INSTRUCTION(Assem.addi(30,29,i))::[]
+  fun procedure_to_asm "Pcheck" formals locals frameSize insns env varTrack bEnv = 
+      let 
+		  val i = length(locals)*16 + length(formals)*16 + frameSize*16 + 2024 (* the size of stack *)
+		  val cntr = ref 0
+		  val frmsIndexList = make_index_list formals cntr
+		  val bogus = 1
+      in 
+		  Assem.TEXT::Assem.INSTRUCTION(Assem.label("Pcheck"))::
+		  calle_save(i)@(check_instructions insns formals locals env varTrack bEnv frmsIndexList bogus)
+          @return_inst(i)
+      end
+    | procedure_to_asm label formals locals frameSize insns env varTrack bEnv =
+	  let 
+		  val i = length(locals)*16 + length(formals)*16 + frameSize*16 + 2024 (* the size of stack *)
+		  val cntr = ref 0
+		  val frmsIndexList = make_index_list formals cntr
+		  val bogus = 0
+	  in 
+		  Assem.TEXT::Assem.INSTRUCTION(Assem.label(label))::
+		  calle_save(i)@(check_instructions insns formals locals env varTrack bEnv frmsIndexList bogus)
+          @return_inst(i)
+	  end
 
-  and return_inst (i) =
-      Assem.INSTRUCTION(Assem.load(2,29,12))::
-      Assem.INSTRUCTION(Assem.load(30,29,4))::
-      Assem.INSTRUCTION(Assem.load(31,29,8))::
-      Assem.INSTRUCTION(Assem.load(4,29,12))::
-      Assem.INSTRUCTION(Assem.addi(29,29,i))::
-      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::[]
-
-  and system_calls () = 
+  fun data label size = 
       Assem.DATASEG::
-      Assem.GLOBAL("putint")::
-      Assem.GLOBAL("putstring")::
-      Assem.GLOBAL("getint")::
-      Assem.GLOBAL("getstring")::
-      Assem.TEXT::
-      Assem.INSTRUCTION(Assem.label("putint"))::
-      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
-      Assem.INSTRUCTION(Assem.store(30,29,4))::
-      Assem.INSTRUCTION(Assem.store(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(30,29,24))::
-      Assem.INSTRUCTION(Assem.load(4,30,4))::
-      Assem.INSTRUCTION(Assem.load_imm(2,1))::
-      Assem.INSTRUCTION(Assem.syscall)::
-      Assem.INSTRUCTION(Assem.load(30,29,4))::
-      Assem.INSTRUCTION(Assem.load(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
-      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::
+      Assem.ALIGN(2)::
+      Assem.INSTRUCTION(Assem.LABEL(label))::
+      [Assem.SPACE(size)]
 
-      Assem.TEXT::
-      Assem.INSTRUCTION(Assem.label("putstring"))::
-      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
-      Assem.INSTRUCTION(Assem.store(30,29,4))::
-      Assem.INSTRUCTION(Assem.store(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(30,29,24))::
-      Assem.INSTRUCTION(Assem.load(4,30,4))::
-      Assem.INSTRUCTION(Assem.load_imm(2,4))::
-      Assem.INSTRUCTION(Assem.syscall)::
-      Assem.INSTRUCTION(Assem.load(30,29,4))::
-      Assem.INSTRUCTION(Assem.load(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
-      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::
+  fun rtl_to_asm (RTL.DATA {label,size}) _ _ _ = data label size 
+    | rtl_to_asm (RTL.PROC {label,formals,locals,frameSize,insns}) env varTrack bEnv = 
+      procedure_to_asm label formals locals frameSize insns env varTrack bEnv
 
-      Assem.TEXT::
-      Assem.INSTRUCTION(Assem.label("getint"))::
-      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
-      Assem.INSTRUCTION(Assem.store(30,29,4))::
-      Assem.INSTRUCTION(Assem.store(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(30,29,24))::
-      Assem.INSTRUCTION(Assem.load(4,30,4))::
-      Assem.INSTRUCTION(Assem.load_imm(2,5))::
-      Assem.INSTRUCTION(Assem.syscall)::
-      Assem.INSTRUCTION(Assem.load(30,29,4))::
-      Assem.INSTRUCTION(Assem.load(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
-      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::
+  fun program_to_asm (RTL.PROGRAM([])) _ _ _ = system_calls ()
+    | program_to_asm (RTL.PROGRAM(d::dlist)) env varTrack bEnv = 
+      (rtl_to_asm d env varTrack bEnv)@(program_to_asm (RTL.PROGRAM(dlist)) env varTrack bEnv)
 
-      Assem.TEXT::
-      Assem.INSTRUCTION(Assem.label("getstring"))::
-      Assem.INSTRUCTION(Assem.addi(29,29,~24))::
-      Assem.INSTRUCTION(Assem.store(30,29,4))::
-      Assem.INSTRUCTION(Assem.store(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(30,29,24))::
-      Assem.INSTRUCTION(Assem.load(4,30,4))::
-      Assem.INSTRUCTION(Assem.load_imm(5,80))::
-      Assem.INSTRUCTION(Assem.load_imm(2,8))::
-      Assem.INSTRUCTION(Assem.syscall)::
-      Assem.INSTRUCTION(Assem.load(30,29,4))::
-      Assem.INSTRUCTION(Assem.load(31,29,8))::
-      Assem.INSTRUCTION(Assem.addi(29,29,24))::   
-      Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))::[]
+  (* main program with empty lists as initials *)
+  fun program p = program_to_asm p [] [] []
+
+
 end 
