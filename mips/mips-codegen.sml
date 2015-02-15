@@ -139,7 +139,8 @@ struct
       [Assem.INSTRUCTION(Assem.JUMP(Assem.RETURN))]
 
   fun check_instructions [] _ _ _ _ _ _ _ = []
-    | check_instructions ((RTL.CALL (SOME t, label, tmlist))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
+    | check_instructions ((RTL.CALL (SOME t, label, tmlist))::insns) frms locals env varTrack bEnv 
+      frmsIndexList bogus = 
           f_call_tmp_aloc tmlist label frms locals env varTrack bEnv frmsIndexList @           
           Assem.INSTRUCTION(Assem.addi(29,29,~4*length(tmlist)))::
           Assem.INSTRUCTION(Assem.JUMP(Assem.JAL(Assem.LAB(label))))::
@@ -147,7 +148,8 @@ struct
           Assem.INSTRUCTION(Assem.addi(29,29,4*length(tmlist)))::
           Assem.INSTRUCTION(Assem.store(8,29,t*4))::
           (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
-    | check_instructions ((RTL.CALL (NONE, label, tmlist))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
+    | check_instructions ((RTL.CALL (NONE, label, tmlist))::insns) frms locals env varTrack bEnv 
+      frmsIndexList bogus = 
           f_call_tmp_aloc tmlist label frms locals env varTrack bEnv frmsIndexList @           
           Assem.INSTRUCTION(Assem.addi(29,29,~4*length(tmlist)))::
           Assem.INSTRUCTION(Assem.JUMP(Assem.JAL(Assem.LAB(label))))::
@@ -155,9 +157,11 @@ struct
           Assem.INSTRUCTION(Assem.addi(29,29,4*length(tmlist)))::
           (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
     | check_instructions ((RTL.JUMP (lb))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
-          Assem.INSTRUCTION(Assem.JUMP(Assem.B(lb)))::(check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
+          Assem.INSTRUCTION(Assem.JUMP(Assem.B(lb)))::(check_instructions insns frms locals env varTrack 
+                                                       bEnv frmsIndexList bogus)
     | check_instructions ((RTL.LABDEF (lb))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
-          Assem.INSTRUCTION(Assem.label(lb))::(check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
+          Assem.INSTRUCTION(Assem.label(lb))::(check_instructions insns frms locals env varTrack bEnv 
+                                               frmsIndexList bogus)
     | check_instructions ((RTL.STORE (ty,tmp1,tmp2))::insns) frms locals env varTrack bEnv frmsIndexList bogus = 
           let val (findTm1,index1) = find_index tmp1 frmsIndexList 
               val (findTm2,index2) = find_index tmp2 frmsIndexList
