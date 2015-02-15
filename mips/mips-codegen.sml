@@ -443,7 +443,6 @@ struct
                         (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
                       else 
                         Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
-                        (*Assem.INSTRUCTION(Assem.load(8,8,0))::*)
                         Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
                         Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.DIVU,10,8,9)))::
                         Assem.INSTRUCTION(Assem.store(10,29,tmp * 4))::
@@ -510,7 +509,6 @@ struct
                       Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                       Assem.INSTRUCTION(Assem.OPER(Assem.LB(8,Assem.OFFSET(8,0))))::
                       Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                      (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                       Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SUB,10,8,9)))::
                       Assem.INSTRUCTION(Assem.store(10,29,tmp * 4))::
                       (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1026,7 +1024,6 @@ struct
                     Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                     Assem.INSTRUCTION(Assem.OPER(Assem.LB(8,Assem.OFFSET(8,0))))::
                     Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                    (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                     Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SGE,10,8,9)))::
                     Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                     (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1136,7 +1133,6 @@ struct
                     Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                     Assem.INSTRUCTION(Assem.OPER(Assem.LB(8,Assem.OFFSET(8,0))))::
                     Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                    (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                     Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SNE,10,8,9)))::
                     Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                     (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1350,7 +1346,6 @@ struct
                     Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                     Assem.INSTRUCTION(Assem.OPER(Assem.LB(8,Assem.OFFSET(8,0))))::
                     Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                    (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                     Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SLE,10,8,9)))::
                     Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                     (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus)
@@ -1499,7 +1494,6 @@ struct
                         else 
                         Assem.INSTRUCTION(Assem.load(8,29,t1*4))::
                         Assem.INSTRUCTION(Assem.load(9,29,t2*4))::
-                        (*Assem.INSTRUCTION(Assem.load(9,9,0))::*)
                         Assem.INSTRUCTION(Assem.OPER(Assem.OP(Assem.SLT,10,8,9)))::
                         Assem.INSTRUCTION(Assem.JUMP(Assem.B2(Assem.BNE,10,0,label)))::
                         (check_instructions insns frms locals env varTrack bEnv frmsIndexList bogus))
