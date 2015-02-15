@@ -14,5 +14,5 @@ int fac(int n) {
 int a;
 int main(void) {
   a = getint();
-  putint( fac(a));
+  putint(fac(a));
 }

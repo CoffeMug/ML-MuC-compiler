@@ -32,7 +32,7 @@ void putstring(char s[]);
 void drawpos(char c) {
   char s[2];
 
-  if (c) s[0] = '#';
+  if (c) s[0] = '@';
   else s[0] = ' ';
 
   s[1] = 0;

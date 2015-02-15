@@ -16,10 +16,7 @@ int main (void) {
   char cr[2];
   space[0] = ' ';  space[1] = 0;
   cr[0]    = '\n'; cr[1]    = 0;
-
-
   i = 0;
-
   while (i<=12) {
     putint(i);
     putstring(space);
