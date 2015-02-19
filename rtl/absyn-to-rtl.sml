@@ -63,7 +63,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 declar ys (second envDec) ((first envDec)::sav)
               end 
           | Absyn.EXTERN {name,formals,retTy} => 
-              let val env' = insertFName (Absyn.identName(name),name) retTy env
+              let val env' = insert_function_name (Absyn.identName(name)) name retTy env
               in  declar ys env' sav
               end
         
@@ -125,7 +125,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
             val env' = second_trip formals
             val locals = transLocals (locs,env',RTL.FP-1)
             val env'' = second_trip locals
-            val env  = insertFName (nam,id) ty env''    
+            val env  = insert_function_name nam id ty env''    
             val instTempList = checkBody (fBody,env,ty,eofLab)
             val eofDef = RTL.LABDEF(eofLab)
             val inst = (first instTempList)@[eofDef]
@@ -177,53 +177,6 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
              val (fp'',en',xs')=  transLocals(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp')
            in (fp'',en',xs')
            end
-(*
-    and transFormals ([],en,fp) = (fp,en,[])
-      | transFormals (x::xs,en,fp) = 
-        case x of 
-          Absyn.VARDEC(t,Absyn.VARdecl(x)) =>
-          let val nam = RTL.newTemp()
-          in 
-            if (t = Absyn.INTty) then 
-             let val (fp',en',xs') = transFormals(xs,Env.insert(en,x,(loc,RTL.LONG,(nam,"0"))),fp) 
-             in 
-               (fp',en',nam::xs')
-             end
-            else let val (fp',en',xs') = transFormals(xs,Env.insert(en,x,(loc,RTL.BYTE,(nam,"0"))),fp)
-                 in 
-                   (fp',en',nam::xs')
-                 end
-          end
-        | Absyn.VARDEC(t,Absyn.ARRdecl(x,SOME i)) =>
-          let val nam = RTL.newTemp() 
-          in
-            if (t = Absyn.INTty) then 
-            let 
-               val (fp',en',xs') = transFormals(xs,Env.insert(en,x,(arg,RTL.LONG,(nam,"1"))),fp) 
-            in (fp',en',nam::xs')
-            end
-          else 
-           let 
-               val (fp',en',xs') = transFormals(xs,Env.insert(en,x,(arg,RTL.BYTE,(nam,"1"))),fp) 
-           in (fp',en',nam::xs')
-           end
-          end
-        | Absyn.VARDEC(t,Absyn.ARRdecl(x,NONE)) =>
-          let val nam = RTL.newTemp() 
-          in          
-           if (t = Absyn.INTty) then 
-           let  
-               val (fp',en',xs')=  transFormals(xs,Env.insert(en,x,(arg,RTL.LONG,(nam,"1"))),fp)
-           in (fp',en',nam::xs')
-           end
-          else 
-           let  
-               val (fp',en',xs')=  transFormals(xs,Env.insert(en,x,(arg,RTL.BYTE,(nam,"1"))),fp)
-           in (fp',en',nam::xs')
-           end
-         end
-*)
-
 
     and transFormals ([],en,fp) = (fp,en,[])
       | transFormals (x::xs,en,fp) = 
@@ -241,10 +194,9 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                    (fp',en',nam::xs')
                  end
           end)
-         
 
         | Absyn.VARDEC(t,Absyn.ARRdecl(x,SOME i)) =>
-          if checkFormal x t en then  
+          if check_formals x t en then  
           (let val nam = RTL.newTemp() 
                val (fp',en',xs') = transFormals(xs,en,fp) 
            in (fp',en',nam::xs')
@@ -265,7 +217,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
           end)
 
         | Absyn.VARDEC(t,Absyn.ARRdecl(x,NONE)) =>
-          if checkFormal x t en then   
+          if check_formals x t en then   
           (let val nam = RTL.newTemp() 
                val (fp',en',xs')=  transFormals(xs,en,fp)
            in (fp',en',nam::xs')
@@ -297,14 +249,14 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               (first t1 @ first t2,second t1 @ second t2)
             end
         | Absyn.STMT(Absyn.EFFECT(exp),_,_) => 
-            let val expResult = checkExpr(exp,en)
+            let val expResult = check_expr exp en
                 val instList = first_trip(expResult)
                 val tmpList  = third_trip(expResult)
             in (instList,tmpList)
             end
         | Absyn.STMT(Absyn.EMPTY,_,_) => ([],[])
         | Absyn.STMT(Absyn.IF(exp,stm1,SOME stm2),_,_) =>
-            let val ex = checkExpr(exp,en)
+            let val ex = check_expr exp en
                 val se = first_trip ex                   
                 val te = second_trip ex                     
                 val l1 = RTL.newLabel()
@@ -324,7 +276,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               (insList,fals::third_trip ex@second tmpStm1@second tmpStm2)
             end
         | Absyn.STMT(Absyn.IF(exp,stm1,NONE),_,_) =>
-            let val ex = checkExpr(exp,en)
+            let val ex = check_expr exp en
                 val se = first_trip ex                   
                 val te = second_trip ex                     
                 val l1 = RTL.newLabel()
@@ -339,7 +291,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               (insList,third_trip ex@ tru::second tmpStm1)
             end
         | Absyn.STMT(Absyn.WHILE(exp,stmt),_,_) =>
-            let val ex = checkExpr(exp,en)
+            let val ex = check_expr exp en
                 val te = second_trip ex
                 val s  = checkBody (stmt,en,ty,eofLab)
                 val loop = RTL.newLabel()
@@ -357,7 +309,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               (insList,third_trip ex @ fals::second s)
             end
         | Absyn.STMT(Absyn.RETURN(SOME exp),_,_) =>
-            let val ex = checkExpr(exp,en)
+            let val ex = check_expr exp en
                 val res = second_trip ex 
                 val inst = first_trip ex
                 val lEnd = eofLab
@@ -375,22 +327,22 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               (jump::lDef::[],[]) 
             end
 
-    and checkExpr (ex,en) = 
-       case ex of 
+    and check_expr exp env = 
+       case exp of 
          Absyn.EXP(Absyn.ASSIGN(ex1,ex2),_,_) => 
            (case ex1 of 
               Absyn.EXP(Absyn.ARRAY(id,e),_,_) =>
               let 
-                val befInst1 = checkExpr (ex2,en)
-                val befInst2 = checkExpr (e,en)
+                val befInst1 = check_expr ex2 env
+                val befInst2 = check_expr  e env
                 val instList1 = first_trip befInst1
                 val instList2 = first_trip befInst2
                 val tmpList1 = third_trip befInst1
                 val tmpList2 = third_trip befInst2   
-                val stat = first_trip (valOf(Env.find(en,id)))
-                val ty   = second_trip(valOf(Env.find(en,id)))
-                val offset = first(third_trip (valOf(Env.find(en,id))))
-                val labRef = second(third_trip (valOf(Env.find(en,id))))
+                val stat = first_trip (valOf(Env.find(env,id)))
+                val ty   = second_trip(valOf(Env.find(env,id)))
+                val offset = first(third_trip (valOf(Env.find(env,id))))
+                val labRef = second(third_trip (valOf(Env.find(env,id))))
                 val index  = second_trip befInst2
                 val tmp  = second_trip befInst1
               in 
@@ -443,13 +395,13 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               end
            | Absyn.EXP(Absyn.VAR(id),_,_) =>
              let 
-               val midInst = checkExpr (ex2,en)
+               val midInst = check_expr ex2 env
                val midInstList = first_trip midInst
                val midTmpList = third_trip midInst
-               val stat = first_trip (valOf(Env.find(en,id)))
-               val ty   = second_trip(valOf(Env.find(en,id)))
-               val alocDet  = first(third_trip (valOf(Env.find(en,id))))
-               val labRef =  second(third_trip (valOf(Env.find(en,id))))
+               val stat = first_trip (valOf(Env.find(env,id)))
+               val ty   = second_trip(valOf(Env.find(env,id)))
+               val alocDet  = first(third_trip (valOf(Env.find(env,id))))
+               val labRef =  second(third_trip (valOf(Env.find(env,id))))
                val tmp  = second_trip midInst
              in
                if (stat = 0) then
@@ -470,27 +422,23 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
          | Absyn.EXP(Absyn.VAR(id),_,_) => 
            let   
-             val stat = first_trip (valOf(Env.find(en,id)))
-             val ty   = second_trip(valOf(Env.find(en,id)))
-             val tmp = first(third_trip (valOf(Env.find(en,id))))
-             val labRef =  second(third_trip (valOf(Env.find(en,id))))
+             val stat = first_trip (valOf(Env.find(env,id)))
+             val ty   = second_trip(valOf(Env.find(env,id)))
+             val tmp = first(third_trip (valOf(Env.find(env,id))))
+             val labRef =  second(third_trip (valOf(Env.find(env,id))))
            in 
              if (stat = 0) andalso (labRef = "0")  then ([],tmp,[])
     
              else if (stat = 2) andalso (labRef = "1") then 
                
                 let   val t1   = RTL.newTemp()
-             (*      val t2   = RTL.newTemp()
-                   val t3   = RTL.newTemp() 
-                   val ins1 = RTL.EVAL(t1,RTL.ICON(offset)) *)
-             (*      val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.ADD,t1,RTL.FP))*)
                    val ins3 = RTL.EVAL(t1,RTL.UNARY(RTL.LOAD(RTL.LONG),tmp))
                in 
                  (ins3::[],t1,t1::[]) 
                end 
 
              else if (stat = 0) andalso (labRef = "1") then 
-               let val offset = first(third_trip (valOf(Env.find(en,id))))
+               let val offset = first(third_trip (valOf(Env.find(env,id))))
                    val t1   = RTL.newTemp()
                    val t2   = RTL.newTemp()
                    val t3   = RTL.newTemp() 
@@ -513,11 +461,11 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
             end
          | Absyn.EXP(Absyn.ARRAY(id,exp),_,_) => 
            let 
-             val stat = first_trip (valOf(Env.find(en,id)))
-             val ty   = second_trip(valOf(Env.find(en,id)))
-             val offset = first(third_trip (valOf(Env.find(en,id))))
-             val labRef = second(third_trip (valOf(Env.find(en,id))))
-             val midInst = checkExpr (exp,en)
+             val stat = first_trip (valOf(Env.find(env,id)))
+             val ty   = second_trip(valOf(Env.find(env,id)))
+             val offset = first(third_trip (valOf(Env.find(env,id))))
+             val labRef = second(third_trip (valOf(Env.find(env,id))))
+             val midInst = check_expr exp env
              val instListMid = first_trip midInst
              val tmpListMid = third_trip midInst
              val index  = (second_trip midInst)
@@ -588,8 +536,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.ADD,ex1,ex2),_,_) => 
             let 
-              val midInst1  = checkExpr (ex1,en)
-              val midInst2  = checkExpr (ex2,en)
+              val midInst1  = check_expr ex1 env
+              val midInst2  = check_expr ex2 env
               val il1   = first_trip midInst1
               val t1    =  (second_trip midInst1)
               val il2   = first_trip midInst2
@@ -604,8 +552,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.SUB,ex1,ex2),_,_) => 
             let 
-              val midInst1  = checkExpr (ex1,en)
-              val midInst2  = checkExpr (ex2,en)
+              val midInst1  = check_expr ex1 env
+              val midInst2  = check_expr ex2 env
               val il1   = first_trip midInst1
               val t1    =  (second_trip midInst1)
               val il2   = first_trip midInst2
@@ -620,8 +568,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.MUL,ex1,ex2),_,_) => 
             let 
-              val midInst1  = checkExpr (ex1,en)
-              val midInst2  = checkExpr (ex2,en)
+              val midInst1  = check_expr ex1 env
+              val midInst2  = check_expr ex2 env
               val il1   = first_trip midInst1
               val t1    =  (second_trip midInst1)
               val il2   = first_trip midInst2
@@ -636,8 +584,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.DIV,ex1,ex2),_,_) => 
             let 
-              val midInst1  = checkExpr (ex1,en)
-              val midInst2  = checkExpr (ex2,en)
+              val midInst1  = check_expr ex1 env
+              val midInst2  = check_expr ex2 env
               val il1   = first_trip midInst1
               val t1    =  second_trip midInst1
               val il2   = first_trip midInst2
@@ -652,8 +600,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.LT,ex1,ex2),_,_) => 
             let 
-              val exp1 = checkExpr(ex1,en)
-              val exp2 = checkExpr(ex2,en)
+              val exp1 = check_expr ex1 env
+              val exp2 = check_expr ex2 env
               val se1 = first_trip exp1
               val se2 = first_trip exp2                      
               val te1 = second_trip exp1                    
@@ -677,8 +625,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.LE,ex1,ex2),_,_) => 
             let 
-              val exp1 = checkExpr(ex1,en)
-              val exp2 = checkExpr(ex2,en)
+              val exp1 = check_expr ex1 env
+              val exp2 = check_expr ex2 env
               val se1 = first_trip exp1
               val se2 = first_trip exp2                      
               val te1 = second_trip exp1                    
@@ -702,8 +650,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.EQ,ex1,ex2),_,_) => 
             let 
-              val exp1 = checkExpr(ex1,en)
-              val exp2 = checkExpr(ex2,en)
+              val exp1 = check_expr ex1 env
+              val exp2 = check_expr ex2 env
               val se1 = first_trip exp1
               val se2 = first_trip exp2                      
               val te1 = second_trip exp1                    
@@ -727,8 +675,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.NE,ex1,ex2),_,_) => 
             let 
-              val exp1 = checkExpr(ex1,en)
-              val exp2 = checkExpr(ex2,en)
+              val exp1 = check_expr ex1 env
+              val exp2 = check_expr ex2 env
               val se1 = first_trip exp1
               val se2 = first_trip exp2                      
               val te1 = second_trip exp1                    
@@ -752,8 +700,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.GE,ex1,ex2),_,_) => 
             let 
-              val exp1 = checkExpr(ex1,en)
-              val exp2 = checkExpr(ex2,en)
+              val exp1 = check_expr ex1 env
+              val exp2 = check_expr ex2 env
               val se1 = first_trip exp1
               val se2 = first_trip exp2                      
               val te1 = second_trip exp1                    
@@ -777,8 +725,8 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.GT,ex1,ex2),_,_) => 
             let 
-              val exp1 = checkExpr(ex1,en)
-              val exp2 = checkExpr(ex2,en)
+              val exp1 = check_expr ex1 env
+              val exp2 = check_expr ex2 env
               val se1 = first_trip exp1
               val se2 = first_trip exp2                      
               val te1 = second_trip exp1                    
@@ -802,7 +750,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
           | Absyn.EXP(Absyn.BINARY(Absyn.ANDALSO,ex1,ex2),_,_) => 
             let 
-              val exInst1  = checkExpr (ex1,en)
+              val exInst1  = check_expr ex1 env
               val ilist1   = first_trip exInst1
               val restm1   = second_trip exInst1
               val tmpList1 = third_trip exInst1
@@ -812,7 +760,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               val loadt2   = RTL.EVAL(tmptrue,RTL.ICON(1))
               val cJump1   = RTL.CJUMP(RTL.EQ,restm1,tmptrue,l1)
               val labdef1  = RTL.LABDEF(l1)
-              val exInst2  = checkExpr (ex2,en)
+              val exInst2  = check_expr ex2 env
               val ilist2   = first_trip exInst2
               val restm2   = second_trip exInst2
               val tmpList2 = third_trip exInst2
@@ -835,21 +783,21 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
           | Absyn.EXP(Absyn.UNARY(Absyn.NEG,exp),i,j) =>
             let 
               val newExp = Absyn.EXP(Absyn.BINARY(Absyn.SUB,Absyn.EXP(Absyn.CONST(Absyn.INTcon(0)),i,j),exp),i,j) 
-            in checkExpr(newExp,en) 
+            in check_expr newExp env
             end
 
           | Absyn.EXP(Absyn.UNARY(Absyn.NOT,exp),i,j) =>
             let 
               val newExp = Absyn.EXP(Absyn.BINARY(Absyn.EQ,Absyn.EXP(Absyn.CONST(Absyn.INTcon(0)),i,j),exp),i,j) 
-            in checkExpr(newExp,en) 
+            in check_expr newExp env 
             end
 
           | Absyn.EXP(Absyn.FCALL(id,exList),_,_) =>
             let 
-              val f = valOf(Env.find(en,id))
+              val f = valOf(Env.find(env,id))
               val ty = second_trip f 
               val label = second(third_trip(f))
-              val (inslist,ftmlist,tmlist) = checkExList exList en
+              val (inslist,ftmlist,tmlist) = check_external_list exList env
               val tm = RTL.newTemp()
             in 
               if ty = RTL.BYTE then  
@@ -859,30 +807,24 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
               else (inslist@[RTL.CALL(NONE,label,ftmlist)],tm,tmlist)
             end
 
-    and checkExList [] _ = ([],[],[])
-      | checkExList (x::xs) en = 
-        let val (insns,tm,tmplist) = checkExpr (x,en)
-            val (inss,restm,tms) = checkExList xs en 
+    and check_external_list [] _ = ([],[],[])
+      | check_external_list (exp::exps) env = 
+        let val (insns,tm,tmplist) = check_expr exp env
+            val (inss,restm,tms) = check_external_list exps env 
         in              
-          (insns@inss,tm::restm,tmplist@tms)
+			(insns@inss,tm::restm,tmplist@tms)
         end
 
-    and insertFName (nam,id) ty en = 
-          case ty of 
-            Absyn.INTty => Env.insert(en,id,(0,RTL.LONG,(0,nam))) 
-          | Absyn.CHARty => Env.insert(en,id,(0,RTL.BYTE,(0,nam)))
-          | _ => Env.insert(en,id,(0,RTL.BYTE,(0,nam)))
+    and insert_function_name name id typ env = 
+		case typ of 
+            Absyn.INTty  => Env.insert(env,id,(0,RTL.LONG,(0,name))) 
+          | Absyn.CHARty => Env.insert(env,id,(0,RTL.BYTE,(0,name)))
+          | _            => Env.insert(env,id,(0,RTL.BYTE,(0,name)))
 
-
-
-
-    and checkFormal x typ en = 
-             case Env.find(en,x) of 
-               SOME (_,ty,_) => if typ = Absyn.INTty andalso ty = RTL.LONG then true 
-                                else if typ = Absyn.INTty andalso ty = RTL.BYTE then false
-                                else if typ = Absyn.CHARty andalso ty = RTL.BYTE then true
-                                else false
-             | NONE   => false
-
+    and check_formals var typ env = 
+		case Env.find(env, var) of 
+            SOME (_,RTL.LONG,_) => typ = Absyn.INTty   
+          | SOME (_,RTL.BYTE,_) => typ = Absyn.INTty orelse typ = Absyn.CHARty 
+          | _                   => false
 
   end (* functor AbsynToRTLFn *)
