@@ -34,29 +34,29 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
     val glob = 1
     val arg  = 2
      
-    fun program(Absyn.PROGRAM{decs = xs,...}) = RTL.PROGRAM(declar xs Env.empty []) 
+    fun program(Absyn.PROGRAM{decs = xs,...}) = RTL.PROGRAM(declar_to_rtl xs Env.empty []) 
 
-    and declar [] _ sav = rev sav
-      | declar (y::ys) env sav = 
+    and declar_to_rtl [] _ sav = rev sav
+      | declar_to_rtl (y::ys) env sav = 
           case y of  
             Absyn.GLOBAL(Absyn.VARDEC(t,d)) => 
-              let val (gRtl,gEnv) = global(t,d,env)
+              let val (gRtl,gEnv) = globals_to_rtl(t,d,env)
               in 
-                declar ys gEnv (gRtl::sav)
+                declar_to_rtl ys gEnv (gRtl::sav)
               end
           | Absyn.FUNC{name = id,formals = forms,retTy = ty,locals = locs, body =fBody} => 
               let 
                 val endOfFunLabel = RTL.newLabel()
                 val (fRtl,fEnv) = func(id,forms,ty,locs,fBody,env,endOfFunLabel)
               in 
-                declar ys fEnv (fRtl::sav)
+                declar_to_rtl ys fEnv (fRtl::sav)
               end 
           | Absyn.EXTERN {name,formals,retTy} => 
               let val env' = insert_function_name (Absyn.identName(name)) name retTy env
-              in  declar ys env' sav
+              in  declar_to_rtl ys env' sav
               end
 
-    and global (t,d,en) =  
+    and globals_to_rtl (t,d,en) =  
           case d of 
             Absyn.VARdecl(x) =>
                (if (t = Absyn.INTty) then 
@@ -223,18 +223,18 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
            end
          end )
 
-	and f_body_to_rtl (stmt,en,ty,eofLab) = 
+    and f_body_to_rtl (stmt,en,ty,eofLab) = 
         case stmt of 
-			Absyn.STMT(Absyn.SEQ(st1,st2),_,_) =>  
+            Absyn.STMT(Absyn.SEQ(st1,st2),_,_) =>  
             let val (st1InstList,st1TmpList) = f_body_to_rtl (st1,en,ty,eofLab)
                 val (st2InstList,st2TmpList) = f_body_to_rtl (st2,en,ty,eofLab)
             in 
-				(st1InstList@st2InstList,st1TmpList@st2TmpList)
+                (st1InstList@st2InstList,st1TmpList@st2TmpList)
             end
           | Absyn.STMT(Absyn.EFFECT(exp),_,_) => 
-			let val (instList,_,tmpList) = check_expr exp en
-			in (instList,tmpList)
-			end
+            let val (instList,_,tmpList) = check_expr exp en
+            in (instList,tmpList)
+            end
           | Absyn.STMT(Absyn.EMPTY,_,_) => ([],[])
           | Absyn.STMT(Absyn.IF(exp,stm1,SOME stm2),_,_) =>
             let val (se,te,expTmpList) = check_expr exp en
@@ -250,7 +250,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 val labDefL2 = RTL.LABDEF(l2)
                 val insList = se@[loadF,cJump]@s1@[jump,labDefL1]@s2@[labDefL2]
             in 
-				(insList,fals::expTmpList@stm1TmpList@stm2TmpList)
+                (insList,fals::expTmpList@stm1TmpList@stm2TmpList)
             end
           | Absyn.STMT(Absyn.IF(exp,stm1,NONE),_,_) =>
             let val (se,te,expTmpList) = check_expr exp en
@@ -262,7 +262,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 val labDefL1 = RTL.LABDEF(l1)
                 val insList = se@loadTru::cJump::s1@labDefL1::[]
             in 
-				(insList,expTmpList@tru::stm1TmpList)
+                (insList,expTmpList@tru::stm1TmpList)
             end
           | Absyn.STMT(Absyn.WHILE(exp,stmt),_,_) =>
             let val (se,te,expTmpList) = check_expr exp en
@@ -277,7 +277,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 val stopDef = RTL.LABDEF(stop)
                 val insList = loopDef::se@loadF::cJump::sIns@jump::stopDef::[]
             in 
-				(insList,expTmpList@fals::stmtTmpList)
+                (insList,expTmpList@fals::stmtTmpList)
             end
           | Absyn.STMT(Absyn.RETURN(SOME exp),_,_) =>
             let val (inst,res,expTmpList) = check_expr exp en
@@ -286,93 +286,94 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 val lDef = RTL.LABDEF(lEnd)
                 val ins = RTL.EVAL(RTL.RV,RTL.TEMP(res))
             in 
-				(inst@[ins,jump],expTmpList) 
+                (inst@[ins,jump],expTmpList) 
             end
           | Absyn.STMT(Absyn.RETURN(NONE),_,_) =>
             let val lEnd = eofLab
                 val jump = RTL.JUMP(lEnd)
                 val lDef = RTL.LABDEF(lEnd)
             in 
-				([jump,lDef],[]) 
+                ([jump,lDef],[]) 
             end
 
    and check_expr exp env = 
-	   case exp of 
-		   Absyn.EXP(Absyn.ASSIGN(ex1,ex2),_,_) =>
-		   let val (ex2InstList,tmp,ex2TmpList) = check_expr ex2 env
+       case exp of 
+           Absyn.EXP(Absyn.ASSIGN(ex1,ex2),_,_) =>
+           let val (ex2InstList,tmp,ex2TmpList) = check_expr ex2 env
            in
-			   case ex1 of
-				   Absyn.EXP(Absyn.ARRAY(id,e),_,_) =>
-				   let 
-					   val (eInstList,index,eTmpList) = check_expr e env
-					   val (stat,ty,(offset,labRef)) = (valOf(Env.find(env,id)))
-				   in 
-					   if (stat = 0 ) then
-						   let 
-							   val t1 = RTL.newTemp()
-							   val t2 = RTL.newTemp()
-							   val t3 = RTL.newTemp()
-							   val t4 = RTL.newTemp()
-							   val t5 = RTL.newTemp()
-							   val ins1 = RTL.EVAL(t1,RTL.ICON(RTL.sizeof(ty)))
-							   val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.MUL,index,t1))
-							   val ins3 = RTL.EVAL(t3,RTL.ICON(offset))
-							   val ins4 = RTL.EVAL(t4,RTL.BINARY(RTL.ADD,t3,t2))
-							   val ins5 = RTL.EVAL(t5,RTL.BINARY(RTL.ADD,t4,RTL.FP))
-							   val ins6 = RTL.STORE(ty,t5,tmp)
-						   in  
-							   ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4,ins5,ins6]),
-								t5,(ex2TmpList@eTmpList)@([t1,t2,t3,t4,t5]))
-						   end
-					   else if (stat = 2) then 
-						   let 
-							   val t1 = RTL.newTemp()
-							   val t2 = RTL.newTemp()
-							   val t3 = RTL.newTemp()
-							   val ins1 = RTL.EVAL(t1,RTL.ICON(RTL.sizeof(ty)))
-							   val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.MUL,index,t1))
-							   val ins3 = RTL.EVAL(t3,RTL.BINARY(RTL.ADD,offset,t2))
-							   val ins4 = RTL.STORE(ty,t3,tmp)
-						   in 
-							   ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4]),
-								t3,(ex2TmpList@eTmpList)@([t1,t2,t3]))
-						   end
-
-					   else
-						   let 
-							   val t1 = RTL.newTemp()
-							   val t2 = RTL.newTemp()
-							   val t3 = RTL.newTemp()
-							   val t4 = RTL.newTemp()
-							   val ins1 = RTL.EVAL(t1,RTL.ICON(RTL.sizeof(ty)))
-							   val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.MUL,index,t1))
-							   val ins3 = RTL.EVAL(t3,RTL.LABREF(labRef))
-							   val ins4 = RTL.EVAL(t4,RTL.BINARY(RTL.ADD,t3,t2))
-							   val ins5 = RTL.STORE(ty,t4,tmp)
-						   in 
-							   ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4,ins5]),
-								t4,(ex2TmpList@eTmpList)@([t1,t2,t3,t4]))
-						   end
-				   end
-				 | Absyn.EXP(Absyn.VAR(id),_,_) =>
-				   let 
-					   val (stat,ty,(alocDet,labRef)) = (valOf(Env.find(env,id)))
-				   in
-					   if (stat = 0) then
-						   let 
-							   val inst1 = RTL.EVAL(alocDet,RTL.TEMP(tmp))
-						   in  (ex2InstList@([inst1]),tmp, ex2TmpList)
-						   end
-					   else 
-						   let 
-							   val t0 = RTL.newTemp()
-							   val inst1 = RTL.EVAL(t0, RTL.LABREF(labRef))
-							   val inst2 = RTL.STORE(ty,t0,tmp)
-						   in  (ex2InstList@([inst1,inst2]),t0,ex2TmpList@([t0]))
-						   end 
-				   end
-				 | _ => ([],0,[])
-		   end
+             case ex1 of
+               Absyn.EXP(Absyn.ARRAY(id,e),_,_) =>
+               let 
+                 val (eInstList,index,eTmpList) = check_expr e env
+                 val (stat,ty,(offset,labRef)) = (valOf(Env.find(env,id)))
+               in 
+                 if (stat = 0 ) then
+                   let 
+                      val t1 = RTL.newTemp()
+                      val t2 = RTL.newTemp()
+                      val t3 = RTL.newTemp()
+                      val t4 = RTL.newTemp()
+                      val t5 = RTL.newTemp()
+                      val ins1 = RTL.EVAL(t1,RTL.ICON(RTL.sizeof(ty)))
+                      val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.MUL,index,t1))
+                      val ins3 = RTL.EVAL(t3,RTL.ICON(offset))
+                      val ins4 = RTL.EVAL(t4,RTL.BINARY(RTL.ADD,t3,t2))
+                      val ins5 = RTL.EVAL(t5,RTL.BINARY(RTL.ADD,t4,RTL.FP))
+                      val ins6 = RTL.STORE(ty,t5,tmp)
+                   in  
+                     ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4,ins5,ins6]),
+                     t5,(ex2TmpList@eTmpList)@([t1,t2,t3,t4,t5]))
+                   end
+                 else if (stat = 2) then 
+                   let 
+                      val t1 = RTL.newTemp()
+                      val t2 = RTL.newTemp()
+                      val t3 = RTL.newTemp()
+                      val ins1 = RTL.EVAL(t1,RTL.ICON(RTL.sizeof(ty)))
+                      val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.MUL,index,t1))
+                      val ins3 = RTL.EVAL(t3,RTL.BINARY(RTL.ADD,offset,t2))
+                      val ins4 = RTL.STORE(ty,t3,tmp)
+                   in 
+                     ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4]),
+                     t3,(ex2TmpList@eTmpList)@([t1,t2,t3]))
+                   end
+                 else
+                   let 
+                      val t1 = RTL.newTemp()
+                      val t2 = RTL.newTemp()
+                      val t3 = RTL.newTemp()
+                      val t4 = RTL.newTemp()
+                      val ins1 = RTL.EVAL(t1,RTL.ICON(RTL.sizeof(ty)))
+                      val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.MUL,index,t1))
+                      val ins3 = RTL.EVAL(t3,RTL.LABREF(labRef))
+                      val ins4 = RTL.EVAL(t4,RTL.BINARY(RTL.ADD,t3,t2))
+                      val ins5 = RTL.STORE(ty,t4,tmp)
+                   in 
+                     ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4,ins5]),
+                     t4,(ex2TmpList@eTmpList)@([t1,t2,t3,t4]))
+                   end
+                 end
+                 | Absyn.EXP(Absyn.VAR(id),_,_) =>
+                   let 
+                       val (stat,ty,(alocDet,labRef)) = (valOf(Env.find(env,id)))
+                   in
+                     if (stat = 0) then
+                      let 
+                          val inst1 = RTL.EVAL(alocDet,RTL.TEMP(tmp))
+                      in  
+                        (ex2InstList@([inst1]),tmp, ex2TmpList)
+                      end
+                     else 
+                       let 
+                          val t0 = RTL.newTemp()
+                          val inst1 = RTL.EVAL(t0, RTL.LABREF(labRef))
+                          val inst2 = RTL.STORE(ty,t0,tmp)
+                       in  
+                         (ex2InstList@([inst1,inst2]),t0,ex2TmpList@([t0]))
+                       end 
+                   end
+                 | _ => ([],0,[])
+           end
 
          | Absyn.EXP(Absyn.VAR(id),_,_) => 
            let   
@@ -381,23 +382,23 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                if (stat = 0) andalso (labRef = "0") then ([],offset,[])
                else if (stat = 2) andalso (labRef = "1") then 
                    let   
-					   val t1   = RTL.newTemp()
-					   val ins3 = RTL.EVAL(t1,RTL.UNARY(RTL.LOAD(RTL.LONG),offset))
-				   in 
-					   ([ins3],t1,[t1]) 
-				   end 
+                       val t1   = RTL.newTemp()
+                       val ins3 = RTL.EVAL(t1,RTL.UNARY(RTL.LOAD(RTL.LONG),offset))
+                   in 
+                       ([ins3],t1,[t1]) 
+                   end 
                else if (stat = 0) andalso (labRef = "1") then 
-				   let val t1   = RTL.newTemp()
-					   val t2   = RTL.newTemp()
-					   val t3   = RTL.newTemp() 
-					   val ins1 = RTL.EVAL(t1,RTL.ICON(offset)) 
-					   val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.ADD,t1,RTL.FP))
-					   val ins3 = RTL.EVAL(t3,RTL.UNARY(RTL.LOAD(RTL.LONG),t2))
-				   in 
-					   ([ins1,ins2,ins3],t3,[t1,t2,t3]) 
-				   end 
+                   let val t1   = RTL.newTemp()
+                       val t2   = RTL.newTemp()
+                       val t3   = RTL.newTemp() 
+                       val ins1 = RTL.EVAL(t1,RTL.ICON(offset)) 
+                       val ins2 = RTL.EVAL(t2,RTL.BINARY(RTL.ADD,t1,RTL.FP))
+                       val ins3 = RTL.EVAL(t3,RTL.UNARY(RTL.LOAD(RTL.LONG),t2))
+                   in 
+                       ([ins1,ins2,ins3],t3,[t1,t2,t3]) 
+                   end 
                else     
-				   let
+                   let
                        val t0 = RTL.newTemp()
                        val tr = RTL.newTemp()
                        val inst1 = RTL.EVAL(t0,RTL.LABREF(labRef))
@@ -680,16 +681,16 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
         let val (insns,tm,tmplist) = check_expr exp env
             val (inss,restm,tms) = check_external_list exps env 
         in              
-			(insns@inss,tm::restm,tmplist@tms)
+            (insns@inss,tm::restm,tmplist@tms)
         end
 
     and insert_function_name name id typ env = 
-		case typ of 
+        case typ of 
             Absyn.INTty  => Env.insert(env,id,(0,RTL.LONG,(0,name))) 
           | _            => Env.insert(env,id,(0,RTL.BYTE,(0,name)))
 
     and check_formals var typ env = 
-		case Env.find(env, var) of 
+        case Env.find(env, var) of 
             SOME (_,RTL.LONG,_) => typ = Absyn.INTty   
           | SOME (_,RTL.BYTE,_) => typ = Absyn.INTty orelse typ = Absyn.CHARty 
           | _                   => false
