@@ -27,13 +27,6 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
     (* REPLACE WITH YOUR CODE *)
 
-    fun first (a,_) = a
-    fun second (_,b) = b
-
-    fun first_trip (a,_,_) = a
-    fun second_trip (_,b,_) = b
-    fun third_trip (_,_,c) = c
-    
     val sav = []    
 
     val TRUE = RTL.newTemp()
@@ -43,7 +36,6 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
     val loc = 0 
     val glob = 1
     val arg  = 2
-
      
     fun program(Absyn.PROGRAM{decs = xs,...}) = RTL.PROGRAM(declar xs Env.empty sav) 
 
@@ -51,16 +43,16 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
       | declar (y::ys) env sav = 
           case y of  
             Absyn.GLOBAL(Absyn.VARDEC(t,d)) => 
-              let val envDec = global(t,d,env)
+              let val (gRtl,gEnv) = global(t,d,env)
               in 
-                declar ys (second envDec) ((first envDec)::sav)
+                declar ys gEnv (gRtl::sav)
               end
           | Absyn.FUNC{name = id,formals = forms,retTy = ty,locals = locs, body =fBody} => 
               let 
                 val endOfFunLabel = RTL.newLabel()
-                val envDec = func(id,forms,ty,locs,fBody,env,endOfFunLabel)
+                val (fRtl,fEnv) = func(id,forms,ty,locs,fBody,env,endOfFunLabel)
               in 
-                declar ys (second envDec) ((first envDec)::sav)
+                declar ys fEnv (fRtl::sav)
               end 
           | Absyn.EXTERN {name,formals,retTy} => 
               let val env' = insert_function_name (Absyn.identName(name)) name retTy env
@@ -119,17 +111,15 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
     and func (id,forms,ty,locs,fBody,en,eofLab) =
         let val nam = if (Absyn.identName(id)= "main") then Absyn.identName(id) else proc_label id 
-            val formals= transFormals(forms,en,RTL.FP-1)
-            val env' = second_trip formals
-            val locals = transLocals (locs,env',RTL.FP-1)
-            val env'' = second_trip locals
-            val env  = insert_function_name nam id ty env''    
-            val instTempList = f_body_to_rtl (fBody,env,ty,eofLab)
+            val (_,envFormals,rtlFormals) = transFormals(forms,en,RTL.FP-1)
+            val (frameS,envLocals,rtlLocals) = transLocals (locs,envFormals,RTL.FP-1)
+            val envF  = insert_function_name nam id ty envLocals    
+            val (fInst,fTmp) = f_body_to_rtl (fBody,envF,ty,eofLab)
             val eofDef = RTL.LABDEF(eofLab)
-            val inst = (first instTempList)@[eofDef]
+            val inst = (fInst@[eofDef])
         in
-            (RTL.PROC{label= nam, formals = third_trip formals ,locals = (third_trip locals @ second instTempList) , 
-                    frameSize = first_trip locals , insns = inst},env)
+            (RTL.PROC{label= nam, formals = rtlFormals ,locals = (rtlLocals @ fTmp) , 
+                    frameSize = frameS , insns = inst},envF)
         end
 
     and transLocals ([],en,fp) = (fp,en,[])
