@@ -24,87 +24,76 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
       (TextIO.output(TextIO.stdErr, "Compiler error: "^msg^"\n");
        raise AbsynToRTL)
 
-    (* REPLACE WITH YOUR CODE *)
-
-    val TRUE = RTL.newTemp()
-    val FALSE = RTL.newTemp()
+    (* FIXME: get rid of the following two lines which are currently needed by sim10.c *)
+    val _ = RTL.newTemp() 
+    val _ = RTL.newTemp() 
 
     (* global or local *)
     val loc = 0 
     val glob = 1
     val arg  = 2
      
-    fun program(Absyn.PROGRAM{decs = xs,...}) = RTL.PROGRAM(declar_to_rtl xs Env.empty []) 
+    fun program(Absyn.PROGRAM{decs = declarations,...}) = RTL.PROGRAM(declar_to_rtl declarations Env.empty []) 
 
-    and declar_to_rtl [] _ sav = rev sav
-      | declar_to_rtl (y::ys) env sav = 
+    and declar_to_rtl [] _ rtlList = rev rtlList
+      | declar_to_rtl (y::ys) env rtlList = 
           case y of  
-            Absyn.GLOBAL(Absyn.VARDEC(t,d)) => 
-              let val (gRtl,gEnv) = globals_to_rtl(t,d,env)
+            Absyn.GLOBAL(Absyn.VARDEC(baseTy,declarator)) => 
+              let val (globalRtl,globalEnv) = globals_to_rtl(baseTy,declarator,env)
               in 
-                declar_to_rtl ys gEnv (gRtl::sav)
+                declar_to_rtl ys globalEnv (globalRtl::rtlList)
               end
-          | Absyn.FUNC{name = id,formals = forms,retTy = ty,locals = locs, body =fBody} => 
+          | Absyn.FUNC{name = name, formals = formals, retTy = retTy, locals = locals, body = body} => 
               let 
                 val endOfFunLabel = RTL.newLabel()
-                val (fRtl,fEnv) = func(id,forms,ty,locs,fBody,env,endOfFunLabel)
+                val (funcRtl,funcEnv) = func (name,formals,retTy,locals,body,env,endOfFunLabel)
               in 
-                declar_to_rtl ys fEnv (fRtl::sav)
+                declar_to_rtl ys funcEnv (funcRtl::rtlList)
               end 
           | Absyn.EXTERN {name,formals,retTy} => 
               let val env' = insert_function_name (Absyn.identName(name)) name retTy env
-              in  declar_to_rtl ys env' sav
+              in  declar_to_rtl ys env' rtlList
               end
 
-    and globals_to_rtl (t,d,en) =  
-          case d of 
-            Absyn.VARdecl(x) =>
-               (if (t = Absyn.INTty) then 
-                 let 
-                   val ty = RTL.LONG
-                   val nam = var_label x
-                 in 
-                   (RTL.DATA{label = nam, size = RTL.sizeof(RTL.LONG)},Env.insert(en,x,(glob,ty,(0,nam))))
-                 end
-                else 
-                 let 
-                   val ty = RTL.BYTE               
-                   val nam= var_label x
-                 in 
-                   (RTL.DATA{label = nam,size = RTL.sizeof(RTL.BYTE)},Env.insert(en,x,(glob,ty,(0,nam))))
-                 end)
+    and globals_to_rtl (baseTy,declarator,env) =  
+        case (baseTy,declarator) of 
+            (Absyn.INTty,Absyn.VARdecl(id)) =>
+            let 
+                val name = var_label id
+            in 
+                (RTL.DATA{label = name, size = RTL.sizeof(RTL.LONG)},Env.insert(env,id,(glob,RTL.LONG,(0,name))))
+            end
+          | (_,Absyn.VARdecl(id)) =>
+            let 
+                val name = var_label id
+            in 
+                (RTL.DATA{label = name, size = RTL.sizeof(RTL.BYTE)},Env.insert(env,id,(glob,RTL.BYTE,(0,name))))
+            end
 
-          | Absyn.ARRdecl(x,SOME i) =>
-               (if (t = Absyn.INTty) then  
-                 let 
-                   val ty = RTL.LONG
-                   val nam = arr_label x
-                 in 
-                   (RTL.DATA{label = nam,size = RTL.sizeof(RTL.LONG)*i},Env.insert(en,x,(glob,ty,(0,nam))))
-                 end
-                else
-                 let 
-                   val ty = RTL.BYTE               
-                   val nam= arr_label x
-                 in 
-                   (RTL.DATA{label = nam,size = RTL.sizeof(RTL.BYTE)*i},Env.insert(en,x,(glob,ty,(0,nam))))
-                 end)
-
-          | Absyn.ARRdecl(x,NONE) =>
-               (if (t = Absyn.INTty) then
-                 let 
-                   val ty = RTL.LONG
-                   val nam = arr_label x
-                 in 
-                   (RTL.DATA{label = nam,size = 0},Env.insert(en,x,(glob,ty,(0,nam))))
-                 end
-                else
-                 let 
-                   val ty = RTL.BYTE               
-                   val nam= arr_label x
-                 in 
-                   (RTL.DATA{label = nam,size = 0},Env.insert(en,x,(glob,ty,(0,nam))))
-                 end)
+          | (Absyn.INTty,Absyn.ARRdecl(id,SOME i)) => 
+            let 
+                val name = arr_label id
+            in 
+                (RTL.DATA{label = name, size = RTL.sizeof(RTL.LONG)*i},Env.insert(env,id,(glob,RTL.LONG,(0,name))))
+            end
+          | (_,Absyn.ARRdecl(id,SOME i)) => 
+            let           
+                val name = arr_label id
+            in 
+                (RTL.DATA{label = name, size = RTL.sizeof(RTL.BYTE)*i},Env.insert(env,id,(glob,RTL.BYTE,(0,name))))
+            end
+          | (Absyn.INTty,Absyn.ARRdecl(id,NONE)) =>
+            let 
+                val name = arr_label id
+            in 
+                (RTL.DATA{label = name, size = 0},Env.insert(env,id,(glob,RTL.LONG,(0,name))))
+            end
+          | (_,Absyn.ARRdecl(id,NONE)) =>
+            let 
+                val name = arr_label id
+            in 
+                (RTL.DATA{label = name, size = 0},Env.insert(env,id,(glob,RTL.BYTE,(0,name))))
+            end
 
     and func (id,forms,ty,locs,fBody,en,eofLab) =
         let val nam = if (Absyn.identName(id)= "main") then Absyn.identName(id) else proc_label id 
