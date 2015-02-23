@@ -37,23 +37,23 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
     and declar_to_rtl [] _ rtlList = rev rtlList
       | declar_to_rtl (y::ys) env rtlList = 
-          case y of  
+        case y of  
             Absyn.GLOBAL(Absyn.VARDEC(baseTy,declarator)) => 
-              let val (globalRtl,globalEnv) = globals_to_rtl(baseTy,declarator,env)
-              in 
+            let val (globalRtl,globalEnv) = globals_to_rtl(baseTy,declarator,env)
+            in 
                 declar_to_rtl ys globalEnv (globalRtl::rtlList)
-              end
+            end
           | Absyn.FUNC{name = name, formals = formals, retTy = retTy, locals = locals, body = body} => 
-              let 
+            let 
                 val endOfFunLabel = RTL.newLabel()
                 val (funcRtl,funcEnv) = func (name,formals,retTy,locals,body,env,endOfFunLabel)
-              in 
+            in 
                 declar_to_rtl ys funcEnv (funcRtl::rtlList)
-              end 
+            end 
           | Absyn.EXTERN {name,formals,retTy} => 
-              let val env' = insert_function_name (Absyn.identName(name)) name retTy env
-              in  declar_to_rtl ys env' rtlList
-              end
+            let val env' = insert_function_name (Absyn.identName(name)) name retTy env
+            in  declar_to_rtl ys env' rtlList
+            end
 
     and globals_to_rtl (baseTy,declarator,env) =  
         case (baseTy,declarator) of 
@@ -111,12 +111,12 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
     and locals_to_rtl ([],en,fp) = (fp,en,[])
       | locals_to_rtl (x::xs,en,fp) = 
         case x of 
-			Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(x)) =>
-			let 
-				val nam = RTL.newTemp()
-				val (fp',en',xs') = locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(nam,"0"))),fp) 
+            Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(x)) =>
+            let 
+                val nam = RTL.newTemp()
+                val (fp',en',xs') = locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(nam,"0"))),fp) 
             in 
-				(fp',en',nam::xs')
+                (fp',en',nam::xs')
             end
           | Absyn.VARDEC(_,Absyn.VARdecl(x)) =>
             let val nam = RTL.newTemp()
@@ -125,90 +125,90 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 (fp',en',nam::xs')
             end
           | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(x,SOME i)) =>
-			let 
-				val fp' = fp + (RTL.sizeof(RTL.LONG) * i)
-				val (fp'',en',xs') = locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(fp,"1"))),fp') 
-			in (fp'',en',xs')
-			end
+            let 
+                val fp' = fp + (RTL.sizeof(RTL.LONG) * i)
+                val (fp'',en',xs') = locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(fp,"1"))),fp') 
+            in (fp'',en',xs')
+            end
           | Absyn.VARDEC(_,Absyn.ARRdecl(x,SOME i)) =>
-			let 
-				val fp' = fp + (RTL.sizeof(RTL.BYTE) * i)
-				val (fp'',en',xs') = locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp') 
-			in (fp'',en',xs')
-			end
+            let 
+                val fp' = fp + (RTL.sizeof(RTL.BYTE) * i)
+                val (fp'',en',xs') = locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp') 
+            in (fp'',en',xs')
+            end
           | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(x,NONE)) =>
-			let 
-				val fp' = fp 
-				val (fp'',en',xs')=locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(fp,"1"))),fp')
-			in (fp'',en',xs')
-			end
+            let 
+                val fp' = fp 
+                val (fp'',en',xs')=locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(fp,"1"))),fp')
+            in (fp'',en',xs')
+            end
           | Absyn.VARDEC(_,Absyn.ARRdecl(x,NONE)) =>
-			let 
-				val fp' = fp 
-				val (fp'',en',xs')=  locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp')
-			in (fp'',en',xs')
-			end
+            let 
+                val fp' = fp 
+                val (fp'',en',xs')=  locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp')
+            in (fp'',en',xs')
+            end
 
     and formals_to_rtl ([],en,fp) = (fp,en,[])
       | formals_to_rtl (x::xs,en,fp) = 
         case x of 
-			Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(x)) =>
-			let val nam = RTL.newTemp()
-				val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(nam,"0"))),fp) 
-			in 
-				(fp',en',nam::xs')
-			end
+            Absyn.VARDEC(Absyn.INTty,Absyn.VARdecl(x)) =>
+            let val nam = RTL.newTemp()
+                val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(nam,"0"))),fp) 
+            in 
+                (fp',en',nam::xs')
+            end
          |  Absyn.VARDEC(_,Absyn.VARdecl(x)) =>
             let val nam = RTL.newTemp()
                 val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(nam,"0"))),fp)
             in 
-				(fp',en',nam::xs')
+                (fp',en',nam::xs')
             end
          | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(x,SOME i)) =>
            if check_formals x (Absyn.INTty) en then  
-			   let 
+               let 
                    val nam = RTL.newTemp() 
-				   val (fp',en',xs') = formals_to_rtl(xs,en,fp) 
-			   in (fp',en',nam::xs')
-			   end
+                   val (fp',en',xs') = formals_to_rtl(xs,en,fp) 
+               in (fp',en',nam::xs')
+               end
            else 
-			   let val nam = RTL.newTemp() 
-				   val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.LONG,(nam,"1"))),fp) 
+               let val nam = RTL.newTemp() 
+                   val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.LONG,(nam,"1"))),fp) 
                in (fp',en',nam::xs')
                end
          | Absyn.VARDEC(t,Absyn.ARRdecl(x,SOME i)) =>
            if check_formals x t en then  
-			   let val nam = RTL.newTemp() 
-				   val (fp',en',xs') = formals_to_rtl(xs,en,fp)
-			   in (fp',en',nam::xs')
-			   end
+               let val nam = RTL.newTemp() 
+                   val (fp',en',xs') = formals_to_rtl(xs,en,fp)
+               in (fp',en',nam::xs')
+               end
            else 
-			   let val nam = RTL.newTemp() 
-				   val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.BYTE,(nam,"1"))),fp) 
-			   in (fp',en',nam::xs')
-			   end
+               let val nam = RTL.newTemp() 
+                   val (fp',en',xs') = formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.BYTE,(nam,"1"))),fp) 
+               in (fp',en',nam::xs')
+               end
          | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(x,NONE)) =>
            if check_formals x (Absyn.INTty) en then   
-			   let val nam = RTL.newTemp() 
-				   val (fp',en',xs') = formals_to_rtl(xs,en,fp)
-			   in (fp',en',nam::xs')
-			   end
+               let val nam = RTL.newTemp() 
+                   val (fp',en',xs') = formals_to_rtl(xs,en,fp)
+               in (fp',en',nam::xs')
+               end
            else 
-			   let val nam = RTL.newTemp()   
-				   val (fp',en',xs')=  formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.LONG,(nam,"1"))),fp)
+               let val nam = RTL.newTemp()   
+                   val (fp',en',xs')=  formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.LONG,(nam,"1"))),fp)
                in (fp',en',nam::xs')
                end
          | Absyn.VARDEC(t,Absyn.ARRdecl(x,NONE)) =>
            if check_formals x t en then   
                let val nam = RTL.newTemp() 
                    val (fp',en',xs') = formals_to_rtl(xs,en,fp)
-			   in (fp',en',nam::xs')
-			   end
+               in (fp',en',nam::xs')
+               end
            else 
-			   let val nam = RTL.newTemp()   
-				   val (fp',en',xs')=  formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.BYTE,(nam,"1"))),fp)
-			   in (fp',en',nam::xs')
-			   end
+               let val nam = RTL.newTemp()   
+                   val (fp',en',xs')=  formals_to_rtl(xs,Env.insert(en,x,(arg,RTL.BYTE,(nam,"1"))),fp)
+               in (fp',en',nam::xs')
+               end
 
     and f_body_to_rtl (stmt,en,ty,eofLab) = 
         case stmt of 
