@@ -294,7 +294,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                  val (eInstList,index,eTmpList) = check_expr e env
                  val (stat,ty,(offset,labRef)) = (valOf(Env.find(env,id)))
                in 
-                 if (stat = 0 ) then
+                 if stat = 0 then
                    let 
                       val t1 = RTL.newTemp()
                       val t2 = RTL.newTemp()
@@ -311,7 +311,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                      ((ex2InstList@eInstList)@([ins1,ins2,ins3,ins4,ins5,ins6]),
                      t5,(ex2TmpList@eTmpList)@([t1,t2,t3,t4,t5]))
                    end
-                 else if (stat = 2) then 
+                 else if stat = 2 then 
                    let 
                       val t1 = RTL.newTemp()
                       val t2 = RTL.newTemp()
@@ -344,7 +344,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                    let 
                        val (stat,ty,(alocDet,labRef)) = (valOf(Env.find(env,id)))
                    in
-                     if (stat = 0) then
+                     if stat = 0 then
                       let 
                           val inst1 = RTL.EVAL(alocDet,RTL.TEMP(tmp))
                       in  
@@ -366,15 +366,15 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
            let   
                val (stat,ty,(offset,labRef)) = (valOf(Env.find(env,id)))
            in 
-               if (stat = 0) andalso (labRef = "0") then ([],offset,[])
-               else if (stat = 2) andalso (labRef = "1") then 
+               if stat = 0 andalso labRef = "0" then ([],offset,[])
+               else if stat = 2 andalso labRef = "1" then 
                    let   
                        val t1   = RTL.newTemp()
                        val ins3 = RTL.EVAL(t1,RTL.UNARY(RTL.LOAD(RTL.LONG),offset))
                    in 
                        ([ins3],t1,[t1]) 
                    end 
-               else if (stat = 0) andalso (labRef = "1") then 
+               else if stat = 0 andalso labRef = "1" then 
                    let val t1   = RTL.newTemp()
                        val t2   = RTL.newTemp()
                        val t3   = RTL.newTemp() 

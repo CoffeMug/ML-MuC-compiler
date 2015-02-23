@@ -9,7 +9,7 @@ int getstring(char s[]);
 
 int main(void) {
   char nameq[12];
-  char ageq[10];
+  char ageq[11];
   char youare[10];
   char cr[2];
 
@@ -37,8 +37,9 @@ int main(void) {
   ageq[5]='a';
   ageq[6]='g';
   ageq[7]='e';
-  ageq[8]=' ';
-  ageq[9]=0;
+  ageq[8]='?';
+  ageq[9]=' ';
+  ageq[10]=0;
 
   youare[0]='Y';
   youare[1]='o';
