@@ -15,7 +15,10 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
 
     structure Env = Absyn.IdentDict
 
-    fun proc_label id = "P" ^ Absyn.identName id
+    fun proc_label id = 
+      case (Absyn.identName id) of 
+        "main" => "main"
+       | _     => "P" ^ Absyn.identName id
     fun var_label id = "V" ^ Absyn.identName id
     fun arr_label id = "Arr" ^ Absyn.identName id
 
@@ -46,7 +49,7 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
           | Absyn.FUNC{name = name, formals = formals, retTy = retTy, locals = locals, body = body} => 
             let 
                 val endOfFunLabel = RTL.newLabel()
-                val (funcRtl,funcEnv) = func (name,formals,retTy,locals,body,env,endOfFunLabel)
+                val (funcRtl,funcEnv) = func_to_rtl (name,formals,retTy,locals,body,env,endOfFunLabel)
             in 
                 declar_to_rtl ys funcEnv (funcRtl::rtlList)
             end 
@@ -95,17 +98,16 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
                 (RTL.DATA{label = name, size = 0},Env.insert(env,id,(glob,RTL.BYTE,(0,name))))
             end
 
-    and func (id,forms,ty,locs,fBody,en,eofLab) =
-        let val nam = if (Absyn.identName(id)= "main") then Absyn.identName(id) else proc_label id 
-            val (_,envFormals,rtlFormals) = formals_to_rtl(forms,en,RTL.FP-1)
-            val (frameS,envLocals,rtlLocals) = locals_to_rtl (locs,envFormals,RTL.FP-1)
-            val envF  = insert_function_name nam id ty envLocals    
-            val (fInst,fTmp) = f_body_to_rtl (fBody,envF,ty,eofLab)
+    and func_to_rtl (id,formals,retTy,locals,body,env,eofLab) =
+        let val name = proc_label id
+            val (_,envFormals,rtlFormals) = formals_to_rtl(formals,env,RTL.FP-1)
+            val (frameS,envLocals,rtlLocals) = locals_to_rtl (locals,envFormals,RTL.FP-1)
+            val envF  = insert_function_name name id retTy envLocals    
+            val (fInst,fTmp) = f_body_to_rtl (body,envF,retTy,eofLab)
             val eofDef = RTL.LABDEF(eofLab)
             val inst = (fInst@[eofDef])
         in
-            (RTL.PROC{label= nam, formals = rtlFormals ,locals = (rtlLocals @ fTmp) , 
-                    frameSize = frameS , insns = inst},envF)
+           (RTL.PROC{label= name, formals = rtlFormals, locals = (rtlLocals@fTmp), frameSize = frameS, insns = inst}, envF)
         end
 
     and locals_to_rtl ([],en,fp) = (fp,en,[])
@@ -138,14 +140,12 @@ functor AbsynToRTLFn(structure Absyn : ABSYN structure RTL : RTL) : ABSYN_TO_RTL
             end
           | Absyn.VARDEC(Absyn.INTty,Absyn.ARRdecl(x,NONE)) =>
             let 
-                val fp' = fp 
-                val (fp'',en',xs')=locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(fp,"1"))),fp')
+                val (fp'',en',xs')=locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.LONG,(fp,"1"))),fp)
             in (fp'',en',xs')
             end
           | Absyn.VARDEC(_,Absyn.ARRdecl(x,NONE)) =>
             let 
-                val fp' = fp 
-                val (fp'',en',xs')=  locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp')
+                val (fp'',en',xs')=  locals_to_rtl(xs,Env.insert(en,x,(loc,RTL.BYTE,(fp,"1"))),fp)
             in (fp'',en',xs')
             end
 
