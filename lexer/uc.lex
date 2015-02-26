@@ -25,8 +25,8 @@ end
 
 (* HELPER FUNCTIONS HERE *)
 
-fun inc( i ) = i := !(i) + 1
-fun dec( i)  = i := !(i) - 1
+fun inc(i) = i := !(i) + 1
+fun dec(i) = i := !(i) - 1
 
 %%
 
@@ -101,7 +101,7 @@ ws = [\ \t];
 <INITIAL>{backslashn} => (Tokens.INTEGER_CONSTANT(10,yypos,0));
 
 <INITIAL>. =>
-    (let val msg = "illegal character " ^ yytext
+    (let val msg = "Illegal character " ^ yytext
      in
        LexArg.error2 lexarg (msg,yypos,yypos);
        continue()
