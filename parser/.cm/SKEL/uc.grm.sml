@@ -1,2 +1,0 @@
-Skeleton 5
-ae"UCLrValsFn"i4aдўToken"gp1c"TOKEN"aдўAbsyn"gp1c"ABSYN"aдўLexArg"gp1c"LEXARG"f±яjh2ad"ParserData"h7aдўHeader"и0aдўLrTable"gp2яяЃ2CaяgpяЃbезр±яЃ2f6d"Char"Cd"List"d"String"d"General"яЃ2d"Array"Nbезр±яЃ&d2f2я%я9aдўMlyValue"яЃ/ad"EC"h2я‚bяѓж±яѓad"Actions"h2bяѓf3яЃ2я%яѓяѓ3Nad"Tokens"jяЃ/gp1c"UC_TOKENS"gp1c"UC_LRVALS"

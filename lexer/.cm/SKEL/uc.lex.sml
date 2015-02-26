@@ -1,2 +1,0 @@
-Skeleton 5
-ae"UCLexFn"i3aä¢Tokens"gp1c"UC_TOKENS"aä¢LexArg"gp1c"LEXARG"f5Cä¢Char"ä¢TextIO"ÿä¢Vector"ÿ'Njh3aä¢yyInput"jh3aä¢TIO"gp1ÿad"TSIO"gp2ÿ/d"StreamIO"ad"TPIO"gp1d"TextPrimIO"è0aä¢UserDeclarations"ÿ‚,bbd2egp1ÿ‚/f9d"IO"d"Int"ÿ?d"String"Cÿÿ‚/ÿÿ!ÿ'Nf0f1ÿ!gp1c"ARG_LEXER"

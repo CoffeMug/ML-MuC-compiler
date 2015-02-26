@@ -14,23 +14,16 @@ val commentCount = ref 0
 fun eof (lexarg) =
   let val pos = LexArg.readPos lexarg
   in
- 	if(!commentCount) = 0 then () else 
-	let val msg = "Unclosed comment!" 
-	in 
- 		LexArg.error2 lexarg (msg,pos,pos)
+    if(!commentCount) = 0 then () else 
+    let val msg = "Unclosed comment!" 
+    in 
+        LexArg.error2 lexarg (msg,pos,pos)
 
-	end;
-    	Tokens.EOF(pos, pos)
+    end;
+        Tokens.EOF(pos, pos)
 end
 
- 
-
-(* YOUR HELPER FUNCTIONS HERE *)
-
-(* YOUR HELPER DECLARATIONS BEFORE SECOND "double-percent" *)
-(* YOUR TOKENS SPECIFICATION AFTER SECOND "double-percent" *)
-(* sorry, but ml-lex doesn't allow comments in the sections below *)
-
+(* HELPER FUNCTIONS HERE *)
 
 fun inc( i ) = i := !(i) + 1
 fun dec( i)  = i := !(i) - 1
@@ -38,7 +31,7 @@ fun dec( i)  = i := !(i) - 1
 %%
 
 %header (functor UCLexFn(structure Tokens : UC_TOKENS
-			 structure LexArg : LEXARG) : ARG_LEXER);
+             structure LexArg : LEXARG) : ARG_LEXER);
  
 %arg (lexarg);
 %full
@@ -86,32 +79,30 @@ ws = [\ \t];
 <INITIAL>"while"  => (Tokens.WHILE(yypos, yypos+4));
 
 
-<INITIAL>"/*"	  => (YYBEGIN COMMENT; inc (commentCount) ; continue());
+<INITIAL>"/*"     => (YYBEGIN COMMENT; inc (commentCount) ; continue());
 <COMMENT>"*/"     => (YYBEGIN INITIAL; dec (commentCount); continue());
-<INITIAL>"//"		=> (YYBEGIN LINECOMMENT; continue());
-<COMMENT,LINECOMMENT>.	=> (continue());
-<LINECOMMENT>"\n"   => (YYBEGIN INITIAL; LexArg.newLine(lexarg,yypos);LexArg.source(lexarg); continue());
-<INITIAL,COMMENT>"\n" => (LexArg.newLine(lexarg,yypos);LexArg.source(lexarg); continue());
+<INITIAL>"//"     => (YYBEGIN LINECOMMENT; continue());
+<COMMENT,LINECOMMENT>.  => (continue());
+<LINECOMMENT>"\n"       => (YYBEGIN INITIAL; LexArg.newLine(lexarg,yypos);LexArg.source(lexarg); continue());
+<INITIAL,COMMENT>"\n"   => (LexArg.newLine(lexarg,yypos);LexArg.source(lexarg); continue());
 
 <INITIAL>{ws}+ => (continue());
 <INITIAL>{ident} => (Tokens.IDENT (yytext,yypos,yypos+ size yytext));
-
-<INITIAL>{int} 	=> (Tokens.INTEGER_CONSTANT(valOf(Int.fromString (yytext)),yypos,yypos+ size yytext));
+<INITIAL>{int} => (Tokens.INTEGER_CONSTANT(valOf(Int.fromString (yytext)),yypos,yypos+ size yytext));
 
 <INITIAL>{ch} => 
-
    (let val a = String.substring(yytext,1,1)
-		val b = String.sub (a,0)
-		val c = Char.ord b
-	in
-		Tokens.INTEGER_CONSTANT(c,yypos, 0)
-	end);
+        val b = String.sub (a,0)
+        val c = Char.ord b
+    in
+        Tokens.INTEGER_CONSTANT(c,yypos, 0)
+    end);
 
 <INITIAL>{backslashn} => (Tokens.INTEGER_CONSTANT(10,yypos,0));
 
-<INITIAL>.		=>
-	(let val msg = "illegal character " ^ yytext
-	 in
-	   LexArg.error2 lexarg (msg,yypos,yypos);
-	   continue()
-	 end);
+<INITIAL>. =>
+    (let val msg = "illegal character " ^ yytext
+     in
+       LexArg.error2 lexarg (msg,yypos,yypos);
+       continue()
+     end);
