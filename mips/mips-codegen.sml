@@ -19,12 +19,11 @@ struct
   fun find term termList = List.exists (fn x => x = term) termList 
 
   fun find_index term [] = (false,0)
-    | find_index term ((t,i)::ts) =
-        if t=term then (true,i) else find_index term ts
+    | find_index term ((t,i)::ts) = if t = term then (true,i) else find_index term ts
 
-  fun make_index_list ts counter = List.map (fn x => (x, !(ref (tick counter)))) ts
+  fun make_index_list terms counter = List.map (fn x => (x, !(ref (tick counter)))) terms
 
-  fun insert term en = if find term en then en else term::en
+  fun insert term env = if find term env then env else term::env
 
   fun f_call_tmp_aloc [] _ _ _ _ _ _ _ = []
     | f_call_tmp_aloc (t::tl) lb frms locals env varTrack bEnv frmsIndexList =
