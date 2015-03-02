@@ -3,7 +3,7 @@ MLCCompiler
 
 A MuC compiler written in StandardML.
 
-Run make in the top level directory to create the MIPS compiler.
+Run make in the top level directory to generate the MIPS compiler.
 
 Then use the ucc.sh script to create MIPS assebly code from MuC source:
 
