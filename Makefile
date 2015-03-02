@@ -12,3 +12,4 @@ distclean realclean:	clean
 
 clean:
 	rm -f ucc.*-*
+	rm -f *.s   
