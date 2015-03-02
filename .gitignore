@@ -3,3 +3,5 @@
 ucc.*-linux
 /lexer/uc.lex.sml
 /parser/uc.grm.sml
+/parser/uc.grm.desc
+/parser/uc.grm.sig
