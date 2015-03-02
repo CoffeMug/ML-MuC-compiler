@@ -1,0 +1,5 @@
+*.s
+/*/.cm
+ucc.*-linux
+/lexer/uc.lex.sml
+/parser/uc.grm.sml
